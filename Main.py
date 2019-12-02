@@ -11,14 +11,15 @@ class Monitoring(QMainWindow):
         self.icon = "Icon.png"
         self.top = 100
         self.left = 100
-        self.width = 680
-        self.height = 500
+        self.width = 800
+        self.height = 550
         self.initWindow()
 
     def initWindow(self):
         self.setWindowTitle(self.title)
         self.setWindowIcon(QtGui.QIcon(self.icon))
-        self.setGeometry(self.top, self.left, self.width, self.height)
+        self.setFixedSize(self.width, self.height)
+        #self.setGeometry(self.top, self.left, self.width, self.height)
 
         self.tabWidget = QTabWidget(self)
         self.tabWidget.setGeometry(QRect(0, 0, 800, 550))
@@ -55,6 +56,10 @@ class Monitoring(QMainWindow):
 
         self.tab_computerinformation = QWidget()
         self.tabWidget.addTab(self.tab_computerinformation, "Computerinformationen")
+
+        self.btn_refresh = QPushButton(self.tab_computerinformation)
+        self.btn_refresh.setGeometry(QRect(10, self.height-50, 20, 20))
+        self.btn_refresh.setIcon(QtGui.QIcon("refresh.jpg"))
 
         self.tab_logs = QWidget()
         self.tabWidget.addTab(self.tab_logs, "Logs")
