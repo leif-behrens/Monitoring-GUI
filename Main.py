@@ -19,11 +19,24 @@ class Monitoring(QMainWindow):
         self.setWindowTitle(self.title)
         self.setWindowIcon(QtGui.QIcon(self.icon))
         self.setFixedSize(self.width, self.height)
-        #self.setGeometry(self.top, self.left, self.width, self.height)
 
+        
         self.tabWidget = QTabWidget(self)
         self.tabWidget.setGeometry(QRect(0, 0, 800, 550))
+        
+        # Initiate all tabs
+        self.initMonitoring()    
+        self.initComputerinformation()
+        self.initLogs()        
+        self.initConfig()        
+        self.initLoadFile()
+        self.initGraph()
+        
+        
+        self.show()
 
+
+    def initMonitoring(self):
         self.tab_monitoring = QWidget()
         self.tabWidget.addTab(self.tab_monitoring, "Monitoring")
 
@@ -35,7 +48,6 @@ class Monitoring(QMainWindow):
         self.btn_cpu_start_stop.setGeometry(QRect(150, 15, 130, 25))
         self.btn_cpu_start_stop.setText("Start/Stopp")
 
-
         self.lb_ram_start_stop = QLabel(self.tab_monitoring)
         self.lb_ram_start_stop.setGeometry(QRect(15, 50, 150, 25))
         self.lb_ram_start_stop.setText("RAM-Monitoring")
@@ -43,7 +55,6 @@ class Monitoring(QMainWindow):
         self.btn_ram_start_stop = QPushButton(self.tab_monitoring)
         self.btn_ram_start_stop.setGeometry(QRect(150, 50, 130, 25))
         self.btn_ram_start_stop.setText("Start/Stopp")
-
 
         self.lb_disk_start_stop = QLabel(self.tab_monitoring)
         self.lb_disk_start_stop.setGeometry(QRect(15, 85, 150, 25))
@@ -53,7 +64,7 @@ class Monitoring(QMainWindow):
         self.btn_disk_start_stop.setGeometry(QRect(150, 85, 130, 25))
         self.btn_disk_start_stop.setText("Start/Stopp")
 
-
+    def initComputerinformation(self):
         self.tab_computerinformation = QWidget()
         self.tabWidget.addTab(self.tab_computerinformation, "Computerinformationen")
 
@@ -89,57 +100,66 @@ class Monitoring(QMainWindow):
         self.lb_hostname_value.setText("Hier steht der Hostname")
 
 
+        self.lb_user_description = QLabel(self.tab_computerinformation)
+        self.lb_user_description.setGeometry(QRect(15, 90, 200, 25))
+        self.lb_user_description.setText("IP-Adresse")
+
+        self.lb_user_value = QLabel(self.tab_computerinformation)
+        self.lb_user_value.setGeometry(QRect(200, 90, 200, 25))
+        self.lb_user_value.setText("Hier steht die IP-Adresse")
+
+
         self.lb_count_physical_cores_description = QLabel(self.tab_computerinformation)
-        self.lb_count_physical_cores_description.setGeometry(QRect(15, 90, 200, 25))
+        self.lb_count_physical_cores_description.setGeometry(QRect(15, 115, 200, 25))
         self.lb_count_physical_cores_description.setText("Anzahl physischer Kerne")
 
         self.lb_count_physical_cores_value = QLabel(self.tab_computerinformation)
-        self.lb_count_physical_cores_value.setGeometry(QRect(200, 90, 200, 25))
+        self.lb_count_physical_cores_value.setGeometry(QRect(200, 115, 200, 25))
         self.lb_count_physical_cores_value.setText("Hier steht die Anzahl physischer Kerne")
 
 
         self.lb_count_logical_cores_description = QLabel(self.tab_computerinformation)
-        self.lb_count_logical_cores_description.setGeometry(QRect(15, 115, 200, 25))
+        self.lb_count_logical_cores_description.setGeometry(QRect(15, 140, 200, 25))
         self.lb_count_logical_cores_description.setText("Anzahl logischer Kerne")
 
         self.lb_count_logical_cores_value = QLabel(self.tab_computerinformation)
-        self.lb_count_logical_cores_value.setGeometry(QRect(200, 115, 200, 25))
+        self.lb_count_logical_cores_value.setGeometry(QRect(200, 140, 200, 25))
         self.lb_count_logical_cores_value.setText("Hier steht die Anzahl logischer Kerne")
         
 
         self.lb_processor_description = QLabel(self.tab_computerinformation)
-        self.lb_processor_description.setGeometry(QRect(15, 140, 200, 25))
+        self.lb_processor_description.setGeometry(QRect(15, 165, 200, 25))
         self.lb_processor_description.setText("Verbauter Prozessor")
 
         self.lb_processor_value = QLabel(self.tab_computerinformation)
-        self.lb_processor_value.setGeometry(QRect(200, 140, 200, 25))
+        self.lb_processor_value.setGeometry(QRect(200, 165, 200, 25))
         self.lb_processor_value.setText("Hier steht der verbaute Prozessor")
 
 
         self.lb_os_description = QLabel(self.tab_computerinformation)
-        self.lb_os_description.setGeometry(QRect(15, 165, 200, 25))
+        self.lb_os_description.setGeometry(QRect(15, 190, 200, 25))
         self.lb_os_description.setText("Betriebssystem")
 
         self.lb_os_value = QLabel(self.tab_computerinformation)
-        self.lb_os_value.setGeometry(QRect(200, 165, 200, 25))
+        self.lb_os_value.setGeometry(QRect(200, 190, 200, 25))
         self.lb_os_value.setText("Hier steht das Betriebssystem")
 
 
         self.lb_drives_description = QLabel(self.tab_computerinformation)
-        self.lb_drives_description.setGeometry(QRect(15, 190, 200, 25))
+        self.lb_drives_description.setGeometry(QRect(15, 215, 200, 25))
         self.lb_drives_description.setText("Laufwerke")
 
         self.lb_drives_value = QLabel(self.tab_computerinformation)
-        self.lb_drives_value.setGeometry(QRect(200, 190, 200, 25))
+        self.lb_drives_value.setGeometry(QRect(200, 215, 200, 25))
         self.lb_drives_value.setText("Hier sind alle Laufwerke gelistet")
 
 
         self.lb_ram_description = QLabel(self.tab_computerinformation)
-        self.lb_ram_description.setGeometry(QRect(15, 215, 200, 25))
+        self.lb_ram_description.setGeometry(QRect(15, 240, 200, 25))
         self.lb_ram_description.setText("Verbauter Arbeitsspeicher")
 
         self.lb_ram_value = QLabel(self.tab_computerinformation)
-        self.lb_ram_value.setGeometry(QRect(200, 215, 200, 25))
+        self.lb_ram_value.setGeometry(QRect(200, 240, 200, 25))
         self.lb_ram_value.setText("Verbauter Arbeitsspeicher")
 
 
@@ -151,22 +171,21 @@ class Monitoring(QMainWindow):
         self.btn_save_json.setGeometry(QRect(150, 450, 130, 25))
         self.btn_save_json.setText("JSON-Datei speichern")
 
-
+    def initLogs(self):
         self.tab_logs = QWidget()
         self.tabWidget.addTab(self.tab_logs, "Logs")
-
+    
+    def initConfig(self):
         self.tab_config = QWidget()
         self.tabWidget.addTab(self.tab_config, "Konfigurieren")
 
+    def initLoadFile(self):
         self.tab_loadFile = QWidget()
         self.tabWidget.addTab(self.tab_loadFile, "Lade Datei")
 
+    def initGraph(self):
         self.tab_graph = QWidget()
         self.tabWidget.addTab(self.tab_graph, "Graph")
-        
-        self.show()
-
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
