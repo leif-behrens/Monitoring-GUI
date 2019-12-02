@@ -1,5 +1,5 @@
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QPushButton, QLabel
 from PyQt5.QtCore import Qt, QRect
 import sys
 
@@ -25,6 +25,33 @@ class Monitoring(QMainWindow):
 
         self.tab_monitoring = QWidget()
         self.tabWidget.addTab(self.tab_monitoring, "Monitoring")
+
+        self.lb_cpu_start_stop = QLabel(self.tab_monitoring)
+        self.lb_cpu_start_stop.setGeometry(QRect(15, 15, 150, 25))
+        self.lb_cpu_start_stop.setText("CPU-Monitoring")
+
+        self.btn_cpu_start_stop = QPushButton(self.tab_monitoring)
+        self.btn_cpu_start_stop.setGeometry(QRect(150, 15, 130, 25))
+        self.btn_cpu_start_stop.setText("Start/Stopp")
+
+
+        self.lb_ram_start_stop = QLabel(self.tab_monitoring)
+        self.lb_ram_start_stop.setGeometry(QRect(15, 50, 150, 25))
+        self.lb_ram_start_stop.setText("RAM-Monitoring")
+
+        self.btn_ram_start_stop = QPushButton(self.tab_monitoring)
+        self.btn_ram_start_stop.setGeometry(QRect(150, 50, 130, 25))
+        self.btn_ram_start_stop.setText("Start/Stopp")
+
+
+        self.lb_disk_start_stop = QLabel(self.tab_monitoring)
+        self.lb_disk_start_stop.setGeometry(QRect(15, 85, 150, 25))
+        self.lb_disk_start_stop.setText("Festplatten-Monitoring")
+
+        self.btn_disk_start_stop = QPushButton(self.tab_monitoring)
+        self.btn_disk_start_stop.setGeometry(QRect(150, 85, 130, 25))
+        self.btn_disk_start_stop.setText("Start/Stopp")
+
 
         self.tab_computerinformation = QWidget()
         self.tabWidget.addTab(self.tab_computerinformation, "Computerinformationen")
