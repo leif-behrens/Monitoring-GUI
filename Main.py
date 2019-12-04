@@ -1,5 +1,5 @@
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QApplication, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
+from PyQt5.QtWidgets import QApplication, QLineEdit, QFileDialog, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
 from PyQt5.QtCore import Qt, QRect
 import sys
 from functions import *
@@ -107,6 +107,97 @@ class Monitoring(QMainWindow):
         self.btn_ram_start_stop.clicked.connect(self.start_ram)
         self.btn_disk_start_stop.clicked.connect(lambda: self.start_disk(self.cb_disk_mon.currentText()))
         self.cb_disk_mon.currentTextChanged.connect(lambda: self.cb_disk_mon_change(self.cb_disk_mon.currentText()))
+
+    def start_cpu(self):
+        self.start("cpu", "CPU", self.btn_cpu_start_stop)
+       
+    def start_ram(self):
+        self.start("ram", "Arbeitsspeicher", self.btn_ram_start_stop)
+
+    def start_disk(self, disk):
+        # Initialisiere Errorlabel und Statuslabel
+        self.lb_error.setText("")
+        self.lb_status.setText("")
+        self.lw_processes.clear()
+
+        if self.current_config is not None:
+            for d, p in self.processes.items():
+                if disk == d:
+                    self.lb_status.setText(f"Beende Festplatten-Monitoring für Laufwerk: {disk}")
+                    self.lb_disk_mon_status.setStyleSheet("color: red")
+                    self.lb_disk_mon_status.setText(f"{d}-Laufwerk Monitoring: Gestoppt")
+                    self.btn_disk_start_stop.setText("Start")
+                    psutil.Process(pid=p).terminate()
+                    del self.processes[d]
+                    self.monitoring.remove(f"{disk}-Laufwerk")
+                    for mon in self.monitoring:
+                        self.lw_processes.addItem(mon)
+                    return
+                else:
+                    continue
+            
+            self.lb_status.setText(f"Starte Festplatten-Monitoring für Laufwerk: {disk}")
+            self.lb_disk_mon_status.setStyleSheet("color: green")
+            self.lb_disk_mon_status.setText(f"{disk}-Laufwerk Monitoring: Gestartet")
+            self.btn_disk_start_stop.setText("Stopp")
+            self.monitoring.append(f"{disk}-Laufwerk")
+
+            process = multiprocessing.Process(target=mon_disk, args=(1, "logs", "info@leifbehrens.de", True, 70, 80))
+            process.start()
+            self.processes[disk] = process.pid
+
+            for mon in self.monitoring:
+                self.lw_processes.addItem(mon)
+        else:
+            self.lb_error.setText("Wähle zuerst eine Konfiguration.")
+
+    def cb_disk_mon_change(self, disk):
+        if self.current_config is not None:
+
+            for d in self.processes.keys():
+                if disk == d:
+                    self.btn_disk_start_stop.setText("Stopp")
+                    self.lb_disk_mon_status.setStyleSheet("color: green")
+                    self.lb_disk_mon_status.setText(f"{d}-Laufwerk Monitoring: Gestartet")
+                    return
+
+            self.btn_disk_start_stop.setText("Start")
+            self.lb_disk_mon_status.setStyleSheet("color: red")
+            self.lb_disk_mon_status.setText(f"{disk}-Laufwerk Monitoring: Gestoppt")
+
+    def start(self, typ, description, btn):
+        # Initialisiere Errorlabel und Statuslabel
+        self.lb_error.setText("")
+        self.lb_status.setText("")
+        self.lw_processes.clear()
+        
+        if self.current_config is not None:
+            for d, p in self.processes.items():
+                if typ == d:
+                    self.lb_status.setText(f"Beende {description}-Monitoring")
+                    btn.setText("Start")
+                    psutil.Process(pid=p).terminate()
+                    del self.processes[d]
+                    self.monitoring.remove(description)
+                    for mon in self.monitoring:
+                        self.lw_processes.addItem(mon)
+                    return
+                else:
+                    continue
+            
+
+            self.lb_status.setText(f"Starte {description}-Monitoring")
+            self.btn_ram_start_stop.setText("Stopp")
+            self.monitoring.append(description)
+
+            process = multiprocessing.Process(target=mon_memory, args=(1, "logs", "info@leifbehrens.de", True, 70, 80))
+            process.start()
+            self.processes[typ] = process.pid
+
+            for mon in self.monitoring:
+                self.lw_processes.addItem(mon)
+        else:
+            self.lb_error.setText("Wähle zuerst eine Konfiguration.")
 
 
     def initComputerinformation(self):
@@ -237,6 +328,39 @@ class Monitoring(QMainWindow):
         self.tab_config = QWidget()
         self.tabWidget.addTab(self.tab_config, "Konfigurieren")
 
+        self.lb_logs_destination_description = QLabel(self.tab_config)
+        self.lb_logs_destination_description.setGeometry(QRect(15, 15, 100, 25))
+        self.lb_logs_destination_description.setText("Pfad der Logs")
+
+        self.le_logs_destination_value = QLineEdit(self.tab_config)
+        self.le_logs_destination_value.setGeometry(QRect(115, 15, 650, 25))
+        self.le_logs_destination_value.setDisabled(True)
+        
+        self.btn_log_path = QPushButton(self.tab_config)
+        self.btn_log_path.setGeometry(QRect(765, 15, 25, 25))
+        self.btn_log_path.setText("...")
+
+        self.lb_mail_receiver = QLabel(self.tab_config)
+        self.lb_mail_receiver.setGeometry(QRect(15, 50, 200, 25))
+        self.lb_mail_receiver.setText("Empfänger-Mail")
+
+        self.lb_attachment_sent = QLabel(self.tab_config)
+        self.lb_attachment_sent.setGeometry(QRect(15, 85, 200, 25))
+        self.lb_attachment_sent.setText("Logs-Anhang")
+
+        self.lb_softlimits = QLabel(self.tab_config)
+        self.lb_softlimits.setGeometry(QRect(15, 120, 200, 25))
+        self.lb_softlimits.setText("Soflimits")
+
+        self.lb_hardlimits = QLabel(self.tab_config)
+        self.lb_hardlimits.setGeometry(QRect(15, 155, 200, 25))
+        self.lb_hardlimits.setText("Hardlimits")
+
+        self.btn_log_path.clicked.connect(self.get_path)
+
+    def get_path(self):
+        self.le_logs_destination_value.setText(str(QFileDialog.getExistingDirectory(self, "Ordner auswählen")))
+
     def initLoadFile(self):
         self.tab_loadFile = QWidget()
         self.tabWidget.addTab(self.tab_loadFile, "Lade Datei")
@@ -244,97 +368,6 @@ class Monitoring(QMainWindow):
     def initGraph(self):
         self.tab_graph = QWidget()
         self.tabWidget.addTab(self.tab_graph, "Graph")
-
-    def start_cpu(self):
-        self.start("cpu", "CPU", self.btn_cpu_start_stop)
-       
-    def start_ram(self):
-        self.start("ram", "Arbeitsspeicher", self.btn_ram_start_stop)
-
-    def start_disk(self, disk):
-        # Initialisiere Errorlabel und Statuslabel
-        self.lb_error.setText("")
-        self.lb_status.setText("")
-        self.lw_processes.clear()
-
-        if self.current_config is not None:
-            for d, p in self.processes.items():
-                if disk == d:
-                    self.lb_status.setText(f"Beende Festplatten-Monitoring für Laufwerk: {disk}")
-                    self.lb_disk_mon_status.setStyleSheet("color: red")
-                    self.lb_disk_mon_status.setText(f"{d}-Laufwerk Monitoring: Gestoppt")
-                    self.btn_disk_start_stop.setText("Start")
-                    psutil.Process(pid=p).terminate()
-                    del self.processes[d]
-                    self.monitoring.remove(f"{disk}-Laufwerk")
-                    for mon in self.monitoring:
-                        self.lw_processes.addItem(mon)
-                    return
-                else:
-                    continue
-            
-            self.lb_status.setText(f"Starte Festplatten-Monitoring für Laufwerk: {disk}")
-            self.lb_disk_mon_status.setStyleSheet("color: green")
-            self.lb_disk_mon_status.setText(f"{disk}-Laufwerk Monitoring: Gestartet")
-            self.btn_disk_start_stop.setText("Stopp")
-            self.monitoring.append(f"{disk}-Laufwerk")
-
-            process = multiprocessing.Process(target=mon_disk, args=(1, "logs", "info@leifbehrens.de", True, 70, 80))
-            process.start()
-            self.processes[disk] = process.pid
-
-            for mon in self.monitoring:
-                self.lw_processes.addItem(mon)
-        else:
-            self.lb_error.setText("Wähle zuerst eine Konfiguration.")
-
-    def cb_disk_mon_change(self, disk):
-        if self.current_config is not None:
-
-            for d in self.processes.keys():
-                if disk == d:
-                    self.btn_disk_start_stop.setText("Stopp")
-                    self.lb_disk_mon_status.setStyleSheet("color: green")
-                    self.lb_disk_mon_status.setText(f"{d}-Laufwerk Monitoring: Gestartet")
-                    return
-
-            self.btn_disk_start_stop.setText("Start")
-            self.lb_disk_mon_status.setStyleSheet("color: red")
-            self.lb_disk_mon_status.setText(f"{disk}-Laufwerk Monitoring: Gestoppt")
-
-    def start(self, typ, description, btn):
-        # Initialisiere Errorlabel und Statuslabel
-        self.lb_error.setText("")
-        self.lb_status.setText("")
-        self.lw_processes.clear()
-        
-        if self.current_config is not None:
-            for d, p in self.processes.items():
-                if typ == d:
-                    self.lb_status.setText(f"Beende {description}-Monitoring")
-                    btn.setText("Start")
-                    psutil.Process(pid=p).terminate()
-                    del self.processes[d]
-                    self.monitoring.remove(description)
-                    for mon in self.monitoring:
-                        self.lw_processes.addItem(mon)
-                    return
-                else:
-                    continue
-            
-
-            self.lb_status.setText(f"Starte {description}-Monitoring")
-            self.btn_ram_start_stop.setText("Stopp")
-            self.monitoring.append(description)
-
-            process = multiprocessing.Process(target=mon_memory, args=(1, "logs", "info@leifbehrens.de", True, 70, 80))
-            process.start()
-            self.processes[typ] = process.pid
-
-            for mon in self.monitoring:
-                self.lw_processes.addItem(mon)
-        else:
-            self.lb_error.setText("Wähle zuerst eine Konfiguration.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
