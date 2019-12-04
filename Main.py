@@ -341,8 +341,11 @@ class Monitoring(QMainWindow):
         self.btn_log_path.setText("...")
 
         self.lb_mail_receiver = QLabel(self.tab_config)
-        self.lb_mail_receiver.setGeometry(QRect(15, 50, 200, 25))
-        self.lb_mail_receiver.setText("Empfänger-Mail")
+        self.lb_mail_receiver.setGeometry(QRect(15, 50, 330, 25))
+        self.lb_mail_receiver.setText("Mailadresse(n) eingeben. Mehrfache Eingabe mit Semikolon trennen:")
+
+        self.le_mail_receiver = QLineEdit(self.tab_config)
+        self.le_mail_receiver.setGeometry(QRect(350, 50, 415, 25))
 
         self.lb_attachment_sent = QLabel(self.tab_config)
         self.lb_attachment_sent.setGeometry(QRect(15, 85, 200, 25))
