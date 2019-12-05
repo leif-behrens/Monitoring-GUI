@@ -1,10 +1,11 @@
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QApplication, QLineEdit, QFileDialog, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QApplication, QLineEdit, QFileDialog, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
 from PyQt5.QtCore import Qt, QRect
 import sys
 from functions import *
 import psutil
 import multiprocessing
+import json
 
 
 class Monitoring(QMainWindow):
@@ -19,6 +20,10 @@ class Monitoring(QMainWindow):
         self.current_config = ""#None
         self.processes = {}
         self.monitoring = []
+        self.drives = get_pc_information()["drives"]
+        self.drive_chosen = {}
+        for drive in self.drives:
+            self.drive_chosen[drive] = {"soft": "", "hard": ""}
 
         self.initWindow()
 
@@ -56,10 +61,9 @@ class Monitoring(QMainWindow):
         self.btn_cpu_start_stop.setText("Start")
         
 
-
         self.lb_ram_start_stop = QLabel(self.tab_monitoring)
         self.lb_ram_start_stop.setGeometry(QRect(15, 50, 150, 25))
-        self.lb_ram_start_stop.setText("RAM-Monitoring")
+        self.lb_ram_start_stop.setText("Arbeitsspeicher-Monitoring")
 
         self.btn_ram_start_stop = QPushButton(self.tab_monitoring)
         self.btn_ram_start_stop.setGeometry(QRect(150, 50, 130, 25))
@@ -72,8 +76,6 @@ class Monitoring(QMainWindow):
 
         self.cb_disk_mon = QComboBox(self.tab_monitoring)
         self.cb_disk_mon.setGeometry(QRect(150, 85, 40, 25))
-
-        self.drives = get_pc_information()["drives"]
 
         for drive in self.drives:
             self.cb_disk_mon.addItem(drive)
@@ -351,18 +353,216 @@ class Monitoring(QMainWindow):
         self.lb_attachment_sent.setGeometry(QRect(15, 85, 200, 25))
         self.lb_attachment_sent.setText("Logs-Anhang")
 
-        self.lb_softlimits = QLabel(self.tab_config)
-        self.lb_softlimits.setGeometry(QRect(15, 120, 200, 25))
-        self.lb_softlimits.setText("Soflimits")
+        self.cb_attachment_sent = QComboBox(self.tab_config)
+        self.cb_attachment_sent.setGeometry(QRect(115, 85, 50, 25))
+        self.cb_attachment_sent.addItem("Nein")
+        self.cb_attachment_sent.addItem("Ja")
 
-        self.lb_hardlimits = QLabel(self.tab_config)
-        self.lb_hardlimits.setGeometry(QRect(15, 155, 200, 25))
-        self.lb_hardlimits.setText("Hardlimits")
+
+        self.lb_softlimit_description = QLabel(self.tab_config)
+        self.lb_softlimit_description.setGeometry(QRect(115, 130, 60, 25))
+        self.lb_softlimit_description.setText("Softlimit %")
+
+        self.lb_hardlimit_description = QLabel(self.tab_config)
+        self.lb_hardlimit_description.setGeometry(QRect(180, 130, 60, 25))
+        self.lb_hardlimit_description.setText("Hardlimit %")
+
+        self.lb_cpu_description = QLabel(self.tab_config)
+        self.lb_cpu_description.setGeometry(QRect(15, 155, 200, 25))
+        self.lb_cpu_description.setText("CPU")
+
+        self.cb_cpu_softlimit = QComboBox(self.tab_config)
+        self.cb_cpu_softlimit.setGeometry(QRect(115, 155, 50, 25))
+
+        self.cb_cpu_hardlimit = QComboBox(self.tab_config)
+        self.cb_cpu_hardlimit.setGeometry(QRect(180, 155, 50, 25))
+
+        self.lb_cpu_limit_status = QLabel(self.tab_config)
+        self.lb_cpu_limit_status.setGeometry(QRect(250, 155, 200, 25))
+
+
+        self.lb_ram_description = QLabel(self.tab_config)
+        self.lb_ram_description.setGeometry(QRect(15, 190, 200, 25))
+        self.lb_ram_description.setText("Arbeitsspeicher")
+        
+        self.cb_ram_softlimit = QComboBox(self.tab_config)
+        self.cb_ram_softlimit.setGeometry(QRect(115, 190, 50, 25))
+
+        self.cb_ram_hardlimit = QComboBox(self.tab_config)
+        self.cb_ram_hardlimit.setGeometry(QRect(180, 190, 50, 25))
+
+        self.lb_ram_limit_status = QLabel(self.tab_config)
+        self.lb_ram_limit_status.setGeometry(QRect(250, 190, 200, 25))
+
+        
+        self.lb_drives_description = QLabel(self.tab_config)
+        self.lb_drives_description.setGeometry(QRect(15, 225, 200, 25))
+        self.lb_drives_description.setText("Laufwerk")
+
+        self.cb_drives_limits = QComboBox(self.tab_config)
+        self.cb_drives_limits.setGeometry(QRect(70, 225, 40, 25))
+
+        for drive in self.drives:
+            self.cb_drives_limits.addItem(drive)
+
+        self.cb_drives_softlimit = QComboBox(self.tab_config)
+        self.cb_drives_softlimit.setGeometry(QRect(115, 225, 50, 25))
+        
+        self.cb_drives_hardlimit = QComboBox(self.tab_config)
+        self.cb_drives_hardlimit.setGeometry(QRect(180, 225, 50, 25))
+
+        self.lb_drives_limit_status = QLabel(self.tab_config)
+        self.lb_drives_limit_status.setGeometry(QRect(250, 225, 200, 25))
+
+
+        self.cb_cpu_softlimit.addItem("")
+        self.cb_ram_softlimit.addItem("")
+        self.cb_cpu_hardlimit.addItem("")
+        self.cb_ram_hardlimit.addItem("")
+        self.cb_drives_softlimit.addItem("")
+        self.cb_drives_hardlimit.addItem("")
+
+
+        for percent in range(100, 0, -1):
+            self.cb_cpu_softlimit.addItem(str(percent))
+            self.cb_ram_softlimit.addItem(str(percent))
+            self.cb_cpu_hardlimit.addItem(str(percent))
+            self.cb_ram_hardlimit.addItem(str(percent))
+            self.cb_drives_softlimit.addItem(str(percent))
+            self.cb_drives_hardlimit.addItem(str(percent))    
+
+        self.btn_running_config = QPushButton(self.tab_config)
+        self.btn_running_config.setGeometry(QRect(15, self.height-70, 180, 25))
+        self.btn_running_config.setText("Laufende Konfiguration speichern")
+        
+        self.btn_startup_config = QPushButton(self.tab_config)
+        self.btn_startup_config.setGeometry(QRect(200, self.height-70, 180, 25))
+        self.btn_startup_config.setText("Startup Konfiguration speichern")
 
         self.btn_log_path.clicked.connect(self.get_path)
+        self.btn_running_config.clicked.connect(self.running_config)
+        self.cb_drives_limits.currentTextChanged.connect(self.cb_drives_limits_refresh)
+        self.cb_drives_softlimit.currentTextChanged.connect(self.cb_drive_soft_commit)
+        self.cb_drives_hardlimit.currentTextChanged.connect(self.cb_drive_hard_commit)
 
     def get_path(self):
         self.le_logs_destination_value.setText(str(QFileDialog.getExistingDirectory(self, "Ordner auswählen")))
+
+    def running_config(self):
+        # Check, ob alle Eingaben in Ordnung sind
+        if self.check_config():
+            pass
+
+    
+    def check_config(self):
+        config = {}
+        config["logs_path"] = ""
+        config["mail_receiver"] = []
+        config["attachment"] = None
+        config["limits"] = {}
+        config["limits"]["cpu"] = {}
+        config["limits"]["ram"] = {}
+        config["limits"]["drives"] = {}
+
+        drive_chosen = {}
+
+        for drive in self.drives:
+            config["limits"]["drives"][drive] = {}
+            drive_chosen[drive] = {"soft": "", "hard": ""}
+
+        drive_chosen["C:"]["soft"] = 60
+        drive_chosen["C:"]["hard"] = 70
+        invalid_input = []
+
+        if self.le_logs_destination_value.text():
+            config["logs_path"] = self.le_logs_destination_value.text()
+        else:
+            invalid_input.append("Ungültiger Pfad zum Speichern der Logs.")
+        
+        if self.le_mail_receiver.text():
+            for mail in self.le_mail_receiver.text().split(";"):
+                config["mail_receiver"].append(mail)
+        else:
+            invalid_input.append("Keine Mailadresse angegeben.")
+        
+        if self.cb_attachment_sent.currentText() == "Nein":
+            config["attachment"] = False
+        else:
+            config["attachment"] = True
+
+        invalid_input_drives = []
+
+        for k, v in self.drive_chosen.items():
+
+            if self.drive_chosen[k]["soft"] == "" and self.drive_chosen[k]["hard"] == "":
+                print(f"{k} - Beide leer")
+
+            elif (self.drive_chosen[k]["soft"] == "" and not self.drive_chosen[k]["hard"] == "") or (self.drive_chosen[k]["hard"] == "" and not self.drive_chosen[k]["soft"] == ""):
+                print(f"{k} - Einer leer")
+                #invalid_input_drives.append((k, "OV"))    # OV = One Value
+
+            elif int(self.drive_chosen[k]["soft"]) >= int(self.drive_chosen[k]["hard"]):
+                print(f"{k} - Hard GT Soft")
+                #invalid_input_drives.append((k, "GT"))  # GT = Greater Than
+            
+            else:
+                print(f"{k} - Richtig")
+        print()
+        #print(self.drive_chosen)
+        #print(invalid_input_drives)
+
+        """
+        if self.cb_cpu_softlimit.currentText() and self.cb_cpu_hardlimit.currentText():
+
+
+            cpu_soft = int(self.cb_cpu_softlimit.currentText())
+            cpu_hard = int(self.cb_cpu_hardlimit.currentText())
+
+            if cpu_soft < cpu_hard:
+                config["limits"]["cpu"]["soft"] = cpu_soft
+                config["limits"]["cpu"]["hard"] = cpu_hard
+                self.lb_cpu_limit_status.setStyleSheet("color: green")
+                self.lb_cpu_limit_status.setText("Ok")
+            else:
+                self.lb_cpu_limit_status.setStyleSheet("color: red")
+                self.lb_cpu_limit_status.setText("Hardlimit muss größer sein als Softlimit.")                
+        else:
+            self.lb_cpu_limit_status.clear()
+
+
+        if self.cb_ram_softlimit.currentText() and self.cb_ram_hardlimit.currentText():
+            ram_soft = int(self.cb_ram_softlimit.currentText())
+            ram_hard = int(self.cb_ram_hardlimit.currentText())
+
+            if ram_soft < ram_hard:
+                config["limits"]["ram"]["soft"] = ram_soft
+                config["limits"]["ram"]["hard"] = ram_hard
+                self.lb_ram_limit_status.setStyleSheet("color: green")
+                self.lb_ram_limit_status.setText("Ok")
+            else:
+                self.lb_ram_limit_status.setStyleSheet("color: red")
+                self.lb_ram_limit_status.setText("Hardlimit muss größer sein als Softlimit.")                
+        else:
+            self.lb_cpu_limit_status.clear()
+
+        #print(json.dumps(config, indent=4))
+        """
+
+    def cb_drives_limits_refresh(self):
+        for k in self.drive_chosen.keys():
+            if k == self.cb_drives_limits.currentText():
+                self.cb_drives_softlimit.setCurrentText(str(self.drive_chosen[k]["soft"]))
+                self.cb_drives_hardlimit.setCurrentText(str(self.drive_chosen[k]["hard"]))
+
+    def cb_drive_soft_commit(self):
+        for k in self.drive_chosen.keys():
+            if k == self.cb_drives_limits.currentText():
+                self.drive_chosen[k]["soft"] = self.cb_drives_softlimit.currentText()
+
+    def cb_drive_hard_commit(self):
+        for k in self.drive_chosen.keys():
+            if k == self.cb_drives_limits.currentText():
+                self.drive_chosen[k]["hard"] = self.cb_drives_hardlimit.currentText()
 
     def initLoadFile(self):
         self.tab_loadFile = QWidget()
