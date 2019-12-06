@@ -473,6 +473,10 @@ class Monitoring(QMainWindow):
         self.btn_validate_login.setText("Validiere Zugangsdaten")
 
 
+        self.lb_validate_login = QLabel(self.tab_config)
+        self.lb_validate_login.setGeometry(QRect(15, 440, 400, 25))
+
+
         self.lb_config_warnings = QLabel(self.tab_config)
         self.lb_config_warnings.setGeometry(QRect(15, self.height-100, self.width-30, 25))
         self.lb_config_warnings.setStyleSheet("color: red")
@@ -498,9 +502,6 @@ class Monitoring(QMainWindow):
     def running_config(self):
         # Check, ob alle Eingaben in Ordnung sind
         if self.check_config():
-            with open("running_config.json", "w") as j:
-                json.dump(self.current_config, j, indent=4)
-
             parser = ConfigParser()
 
             parser["DEFAULT"] = {"Pfad_Logs": self.current_config["logs_path"],
@@ -531,6 +532,47 @@ class Monitoring(QMainWindow):
 
             with open("running_config.ini", "w") as c:
                 parser.write(c)
+
+
+            try:
+                self.current_config = {"username": "",
+                                       "password": "",
+                                       "server": "",
+                                       "port": "",
+                                       "logs_path": "",
+                                       "mail_receiver": [],
+                                       "attachment": None,
+                                       "limits": {}}
+
+                parser = ConfigParser()
+                parser.read("running_config.ini")
+
+                # Section "Access_to_mail"
+                self.current_config["username"] = parser["Access_to_mail"]["user"]
+                self.current_config["password"] = parser["Access_to_mail"]["password"]
+                self.current_config["server"] = parser["Access_to_mail"]["server"]
+                self.current_config["port"] = int(parser["Access_to_mail"]["port"])
+
+                # Section "DEFAULT"
+                self.current_config["logs_path"] = parser["DEFAULT"]["pfad_logs"]
+                mail_addresses = (parser["DEFAULT"]["mailadressen"]).split(";")
+                for mail in mail_addresses:
+                    self.current_config["mail_receiver"].append(mail)
+                self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
+
+                # Section limits*
+                for limit in parser.sections():
+                    if "limits" in limit:
+                        if "limits_cpu" == limit:
+                            self.current_config["limits"]["cpu"] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
+                        elif "limits_ram" == limit:
+                            self.current_config["limits"]["ram"] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
+                        else:
+                            self.current_config["limits"][limit[-2:]] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
+                print(self.current_config)
+            except:
+                pass
+
     
     def check_config(self):
         self.lb_config_warnings.clear()
@@ -549,7 +591,7 @@ class Monitoring(QMainWindow):
         drive_chosen = {}
 
         config = {"logs_path": "",
-                 "mail_receiver": [],
+                 "mail_receiver": "",
                  "attachment": None,
                  "limits": {"cpu": {},
                             "ram": {},
@@ -567,8 +609,7 @@ class Monitoring(QMainWindow):
             warn_msg_lb += " Ungültiger Pfad zum Speichern der Logs* |"
         
         if self.le_mail_receiver.text():
-            for mail in self.le_mail_receiver.text().split(";"):
-                config["mail_receiver"].append(mail)
+            config["mail_receiver"] = self.le_mail_receiver.text()
         else:
             must_have_inputs.append(False)
             warn_msg_lb += " Keine Mailadresse angegeben* |"
@@ -583,7 +624,7 @@ class Monitoring(QMainWindow):
             pass
         
         elif (self.cb_cpu_softlimit.currentText()  == "" and not self.cb_cpu_hardlimit.currentText()  == "") or (self.cb_cpu_hardlimit.currentText()  == "" and not self.cb_cpu_softlimit.currentText()  == ""):
-            warn_msg_lb += " CPU Wert wurde nicht eingegeben |"
+            warn_msg_lb += " CPU - Wert wurde nicht eingegeben |"
 
         elif int(self.cb_cpu_softlimit.currentText() ) >= int(self.cb_cpu_hardlimit.currentText() ):
             warn_msg_lb += " CPU - Hardlimit muss größer als Softlimit sein |"
@@ -649,7 +690,15 @@ class Monitoring(QMainWindow):
                 self.drive_chosen[k]["hard"] = self.cb_drives_hardlimit.currentText()
 
     def validate_login(self):
+        self.lb_validate_login.clear()
+        self.lb_config_warnings.clear()
+
         try:
+            if not self.le_mail_sender.text() or not self.le_mail_password.text() or not self.le_mail_server.text() or not self.le_mail_server_port.text():
+                self.lb_validate_login.setStyleSheet("color: red")
+                self.lb_validate_login.setText("Es müssen alle Felder ausgefüllt werden")
+                return
+
             mailserver = smtplib.SMTP(self.le_mail_server.text(), int(self.le_mail_server_port.text()))
             mailserver.ehlo()
             mailserver.starttls()
@@ -661,15 +710,18 @@ class Monitoring(QMainWindow):
             self.le_mail_sender.setDisabled(True)
             self.le_mail_password.setDisabled(True)
             self.mail_access = True
-            self.lb_config_warnings.setStyleSheet("color: green")
-            self.lb_config_warnings.setText("Validierung erfolgreich")
+            self.lb_validate_login.setStyleSheet("color: green")
+            self.lb_validate_login.setText("Validierung erfolgreich")
 
         except ValueError:
-            return False, "Port muss eine Zahl sein"
+            self.lb_validate_login.setStyleSheet("color: red")
+            self.lb_validate_login.setText("Port muss eine Zahl sein")
         except smtplib.SMTPAuthenticationError:
-            return False, "Credentials sind ungültig"
+            self.lb_validate_login.setStyleSheet("color: red")
+            self.lb_validate_login.setText("Logindaten nicht korrekt")
         except Exception as e:
-            return False, e
+            self.lb_validate_login.setStyleSheet("color: red")
+            self.lb_validate_login.setText(f"Folgender Fehler: {e}")
             
 
     def initLoadFile(self):
@@ -679,6 +731,13 @@ class Monitoring(QMainWindow):
     def initGraph(self):
         self.tab_graph = QWidget()
         self.tabWidget.addTab(self.tab_graph, "Graph")
+
+    def __del__(self):
+        try:
+            os.remove("running_config.ini")
+        except:
+            pass
+        
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
