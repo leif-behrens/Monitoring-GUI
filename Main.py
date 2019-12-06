@@ -8,6 +8,7 @@ import multiprocessing
 import json
 import smtplib
 import base64
+import shutil
 
 
 class Monitoring(QMainWindow):
@@ -19,7 +20,6 @@ class Monitoring(QMainWindow):
         self.left = 100
         self.width = 800
         self.height = 550
-        self.current_config = None
         self.processes = {}
         self.monitoring = []
         self.drives = get_pc_information()["drives"]
@@ -27,8 +27,82 @@ class Monitoring(QMainWindow):
         for drive in self.drives:
             self.drive_chosen[drive] = {"soft": "", "hard": ""}
         self.mail_access = False
-
         self.initWindow()
+        
+        if os.path.isfile("startup_config.ini"):
+            try:
+                self.current_config = {"username": "",
+                                       "password": "",
+                                       "server": "",
+                                       "port": "",
+                                       "logs_path": "",
+                                       "mail_receiver": [],
+                                       "attachment": None,
+                                       "limits": {}}
+
+                parser = ConfigParser()
+                parser.read("startup_config.ini")
+
+                # Section "Access_to_mail"
+                self.current_config["username"] = parser["Access_to_mail"]["user"]
+                self.current_config["password"] = parser["Access_to_mail"]["password"]
+                self.current_config["server"] = parser["Access_to_mail"]["server"]
+                self.current_config["port"] = int(parser["Access_to_mail"]["port"])
+
+                self.le_mail_sender.setText(self.current_config["username"])
+                self.le_mail_password.setText(base64.b64decode(self.current_config["password"]).decode("utf-8"))
+                self.le_mail_server.setText(self.current_config["server"])
+                self.le_mail_server_port.setText(str(self.current_config["port"]))
+
+                self.le_mail_server.setDisabled(True)
+                self.le_mail_server_port.setDisabled(True)
+                self.le_mail_sender.setDisabled(True)
+                self.le_mail_password.setDisabled(True)
+                self.mail_access = True
+
+                # Section "DEFAULT"
+                self.current_config["logs_path"] = parser["DEFAULT"]["pfad_logs"]
+                mail_addresses = (parser["DEFAULT"]["mailadressen"]).split(";")
+                for mail in mail_addresses:
+                    self.current_config["mail_receiver"].append(mail)
+                self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
+                
+                self.le_logs_destination_value.setText(self.current_config["logs_path"])
+                self.le_mail_receiver.setText((";").join(self.current_config["mail_receiver"]))
+
+                self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
+                
+                if self.current_config["attachment"]:
+                    self.cb_attachment_sent.setCurrentText("Ja")
+                else:
+                    self.cb_attachment_sent.setCurrentText("Nein")
+
+                # Section "limits*""
+                for limit in parser.sections():
+                    if "limits" in limit:
+                        if "limits_cpu" == limit:
+                            self.current_config["limits"]["cpu"] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
+                            self.cb_cpu_softlimit.setCurrentText(str(self.current_config["limits"]["cpu"]["soft"]))
+                            self.cb_cpu_hardlimit.setCurrentText(str(self.current_config["limits"]["cpu"]["hard"]))
+                        elif "limits_ram" == limit:
+                            self.current_config["limits"]["ram"] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
+                            self.cb_ram_softlimit.setCurrentText(str(self.current_config["limits"]["ram"]["soft"]))
+                            self.cb_ram_hardlimit.setCurrentText(str(self.current_config["limits"]["ram"]["hard"]))
+                        else:
+                            self.current_config["limits"][limit[-2:]] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
+                            self.drive_chosen[limit[-2:]]["soft"] = self.current_config["limits"][limit[-2:]]["soft"]
+                            self.drive_chosen[limit[-2:]]["hard"] = self.current_config["limits"][limit[-2:]]["hard"]
+                self.cb_drives_limits_refresh()
+
+                shutil.copy("startup_config.ini", "running_config.ini")
+
+            except Exception as e:
+                self.lb_config_warnings.setStyleSheet("color: red")
+                self.lb_config_warnings.setText(e)
+
+        else:
+            self.current_config = None
+        
 
     def initWindow(self):
         # Mainwindow Einstellungen
@@ -87,12 +161,6 @@ class Monitoring(QMainWindow):
         self.btn_disk_start_stop.setGeometry(QRect(200, 85, 130, 25))
         self.btn_disk_start_stop.setText("Start")
 
-        self.lb_disk_mon_status = QLabel(self.tab_monitoring)
-        self.lb_disk_mon_status.setGeometry(QRect(335, 85, 250, 25))
-        self.lb_disk_mon_status.setText(f"{self.cb_disk_mon.currentText()}-Laufwerk Monitoring: Gestoppt")
-        self.lb_disk_mon_status.setStyleSheet("color: red")
-        
-
         self.lb_monitoring_description = QLabel(self.tab_monitoring)
         self.lb_monitoring_description.setGeometry(QRect(15, 130, 200, 25))
         self.lb_monitoring_description.setText("Laufende Monitorings:")
@@ -129,8 +197,6 @@ class Monitoring(QMainWindow):
             for d, p in self.processes.items():
                 if disk == d:
                     self.lb_status.setText(f"Beende Festplatten-Monitoring für Laufwerk: {disk}")
-                    self.lb_disk_mon_status.setStyleSheet("color: red")
-                    self.lb_disk_mon_status.setText(f"{d}-Laufwerk Monitoring: Gestoppt")
                     self.btn_disk_start_stop.setText("Start")
                     psutil.Process(pid=p).terminate()
                     del self.processes[d]
@@ -142,8 +208,6 @@ class Monitoring(QMainWindow):
                     continue
             
             self.lb_status.setText(f"Starte Festplatten-Monitoring für Laufwerk: {disk}")
-            self.lb_disk_mon_status.setStyleSheet("color: green")
-            self.lb_disk_mon_status.setText(f"{disk}-Laufwerk Monitoring: Gestartet")
             self.btn_disk_start_stop.setText("Stopp")
             self.monitoring.append(f"{disk}-Laufwerk")
 
@@ -162,13 +226,9 @@ class Monitoring(QMainWindow):
             for d in self.processes.keys():
                 if disk == d:
                     self.btn_disk_start_stop.setText("Stopp")
-                    self.lb_disk_mon_status.setStyleSheet("color: green")
-                    self.lb_disk_mon_status.setText(f"{d}-Laufwerk Monitoring: Gestartet")
                     return
 
             self.btn_disk_start_stop.setText("Start")
-            self.lb_disk_mon_status.setStyleSheet("color: red")
-            self.lb_disk_mon_status.setText(f"{disk}-Laufwerk Monitoring: Gestoppt")
 
     def start(self, typ, description, btn):
         # Initialisiere Errorlabel und Statuslabel
@@ -491,6 +551,7 @@ class Monitoring(QMainWindow):
 
         self.btn_log_path.clicked.connect(self.get_path)
         self.btn_running_config.clicked.connect(self.running_config)
+        self.btn_startup_config.clicked.connect(self.startup_config)
         self.cb_drives_limits.currentTextChanged.connect(self.cb_drives_limits_refresh)
         self.cb_drives_softlimit.currentTextChanged.connect(self.cb_drive_soft_commit)
         self.cb_drives_hardlimit.currentTextChanged.connect(self.cb_drive_hard_commit)
@@ -508,8 +569,6 @@ class Monitoring(QMainWindow):
                                 "Mailadressen": self.current_config["mail_receiver"],
                                 "Attach_Logs": self.current_config["attachment"]}
             
-
-
 
             parser["Access_to_mail"] = {"user": self.le_mail_sender.text(),
                                         "password": base64.b64encode(self.le_mail_password.text().encode("utf-8")).decode("utf-8"),
@@ -560,7 +619,7 @@ class Monitoring(QMainWindow):
                     self.current_config["mail_receiver"].append(mail)
                 self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
 
-                # Section limits*
+                # Section "limits*""
                 for limit in parser.sections():
                     if "limits" in limit:
                         if "limits_cpu" == limit:
@@ -569,10 +628,17 @@ class Monitoring(QMainWindow):
                             self.current_config["limits"]["ram"] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
                         else:
                             self.current_config["limits"][limit[-2:]] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
-                print(self.current_config)
+
+                self.lb_validate_login.setText("Laufende Konfiguration gespeichert")
             except:
                 pass
 
+    def startup_config(self):
+        if os.path.isfile("running_config.ini"):
+            shutil.copy("running_config.ini", "startup_config.ini")
+        else:
+            self.running_config()
+            self.startup_config()
     
     def check_config(self):
         self.lb_config_warnings.clear()
@@ -737,7 +803,7 @@ class Monitoring(QMainWindow):
             os.remove("running_config.ini")
         except:
             pass
-        
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
