@@ -6,6 +6,8 @@ from functions import *
 import psutil
 import multiprocessing
 import json
+import smtplib
+import base64
 
 
 class Monitoring(QMainWindow):
@@ -17,13 +19,14 @@ class Monitoring(QMainWindow):
         self.left = 100
         self.width = 800
         self.height = 550
-        self.current_config = ""#None
+        self.current_config = None
         self.processes = {}
         self.monitoring = []
         self.drives = get_pc_information()["drives"]
         self.drive_chosen = {}
         for drive in self.drives:
             self.drive_chosen[drive] = {"soft": "", "hard": ""}
+        self.mail_access = False
 
         self.initWindow()
 
@@ -431,6 +434,49 @@ class Monitoring(QMainWindow):
             self.cb_drives_softlimit.addItem(str(percent))
             self.cb_drives_hardlimit.addItem(str(percent))    
 
+
+        self.lb_mail_sender = QLabel(self.tab_config)
+        self.lb_mail_sender.setGeometry(QRect(15, 300, 200, 25))
+        self.lb_mail_sender.setText("Sender-Mailadresse")
+
+        self.le_mail_sender = QLineEdit(self.tab_config)
+        self.le_mail_sender.setGeometry(QRect(115, 300, 200, 25))
+
+
+        self.lb_mail_password = QLabel(self.tab_config)
+        self.lb_mail_password.setGeometry(QRect(15, 335, 200, 25))
+        self.lb_mail_password.setText("Passwort")
+
+        self.le_mail_password = QLineEdit(self.tab_config)
+        self.le_mail_password.setGeometry(QRect(115, 335, 200, 25))
+        self.le_mail_password.setEchoMode(QLineEdit.Password)
+
+
+        self.lb_mail_server = QLabel(self.tab_config)
+        self.lb_mail_server.setGeometry(QRect(15, 370, 200, 25))
+        self.lb_mail_server.setText("Mailserver")
+        
+        self.le_mail_server = QLineEdit(self.tab_config)
+        self.le_mail_server.setGeometry(QRect(115, 370, 200, 25))
+        
+
+        self.lb_mail_server_port = QLabel(self.tab_config)
+        self.lb_mail_server_port.setGeometry(QRect(15, 405, 200, 25))
+        self.lb_mail_server_port.setText("Port")
+        
+        self.le_mail_server_port = QLineEdit(self.tab_config)
+        self.le_mail_server_port.setGeometry(QRect(115, 405, 40, 25))
+
+        
+        self.btn_validate_login = QPushButton(self.tab_config)
+        self.btn_validate_login.setGeometry(QRect(160, 405, 155, 25))
+        self.btn_validate_login.setText("Validiere Zugangsdaten")
+
+
+        self.lb_config_warnings = QLabel(self.tab_config)
+        self.lb_config_warnings.setGeometry(QRect(15, self.height-100, self.width-30, 25))
+        self.lb_config_warnings.setStyleSheet("color: red")
+
         self.btn_running_config = QPushButton(self.tab_config)
         self.btn_running_config.setGeometry(QRect(15, self.height-70, 180, 25))
         self.btn_running_config.setText("Laufende Konfiguration speichern")
@@ -444,6 +490,7 @@ class Monitoring(QMainWindow):
         self.cb_drives_limits.currentTextChanged.connect(self.cb_drives_limits_refresh)
         self.cb_drives_softlimit.currentTextChanged.connect(self.cb_drive_soft_commit)
         self.cb_drives_hardlimit.currentTextChanged.connect(self.cb_drive_hard_commit)
+        self.btn_validate_login.clicked.connect(self.validate_login)
 
     def get_path(self):
         self.le_logs_destination_value.setText(str(QFileDialog.getExistingDirectory(self, "Ordner auswählen")))
@@ -451,102 +498,139 @@ class Monitoring(QMainWindow):
     def running_config(self):
         # Check, ob alle Eingaben in Ordnung sind
         if self.check_config():
-            pass
+            with open("running_config.json", "w") as j:
+                json.dump(self.current_config, j, indent=4)
 
+            parser = ConfigParser()
+
+            parser["DEFAULT"] = {"Pfad_Logs": self.current_config["logs_path"],
+                                "Mailadressen": self.current_config["mail_receiver"],
+                                "Attach_Logs": self.current_config["attachment"]}
+            
+
+
+
+            parser["Access_to_mail"] = {"user": self.le_mail_sender.text(),
+                                        "password": base64.b64encode(self.le_mail_password.text().encode("utf-8")).decode("utf-8"),
+                                        "server": self.le_mail_server.text(),
+                                        "port":self.le_mail_server_port.text()}
+
+            if self.current_config["limits"]["cpu"]:
+                parser["limits_cpu"] = {"soft": self.current_config["limits"]["cpu"]["soft"],
+                                        "hard": self.current_config["limits"]["cpu"]["hard"]}
+
+            if self.current_config["limits"]["ram"]:
+                parser["limits_ram"] = {"soft": self.current_config["limits"]["ram"]["soft"],
+                                        "hard": self.current_config["limits"]["ram"]["hard"]}
+
+            for k, v in self.current_config["limits"]["drives"].items():
+                if self.current_config["limits"]["drives"][k]:
+                    parser[f"limits_{k}"] = {"soft": v["soft"],
+                                             "hard": v["hard"]}
+
+
+            with open("running_config.ini", "w") as c:
+                parser.write(c)
     
     def check_config(self):
-        config = {}
-        config["logs_path"] = ""
-        config["mail_receiver"] = []
-        config["attachment"] = None
-        config["limits"] = {}
-        config["limits"]["cpu"] = {}
-        config["limits"]["ram"] = {}
-        config["limits"]["drives"] = {}
+        self.lb_config_warnings.clear()
+        self.lb_config_warnings.setStyleSheet("color: red")
 
+        if self.processes:
+            self.lb_config_warnings.setText("Beende zunächst alle Monitorings.")
+            return
+
+        if not self.mail_access:
+            self.lb_config_warnings.setText("Validiere zunächst den Mailzugang.")
+            return
+
+        must_have_inputs = []
+        warn_msg_lb = "|"
         drive_chosen = {}
+
+        config = {"logs_path": "",
+                 "mail_receiver": [],
+                 "attachment": None,
+                 "limits": {"cpu": {},
+                            "ram": {},
+                            "drives": {}}}
 
         for drive in self.drives:
             config["limits"]["drives"][drive] = {}
             drive_chosen[drive] = {"soft": "", "hard": ""}
 
-        drive_chosen["C:"]["soft"] = 60
-        drive_chosen["C:"]["hard"] = 70
-        invalid_input = []
-
+        
         if self.le_logs_destination_value.text():
             config["logs_path"] = self.le_logs_destination_value.text()
         else:
-            invalid_input.append("Ungültiger Pfad zum Speichern der Logs.")
+            must_have_inputs.append(False)
+            warn_msg_lb += " Ungültiger Pfad zum Speichern der Logs* |"
         
         if self.le_mail_receiver.text():
             for mail in self.le_mail_receiver.text().split(";"):
                 config["mail_receiver"].append(mail)
         else:
-            invalid_input.append("Keine Mailadresse angegeben.")
+            must_have_inputs.append(False)
+            warn_msg_lb += " Keine Mailadresse angegeben* |"
         
         if self.cb_attachment_sent.currentText() == "Nein":
             config["attachment"] = False
         else:
             config["attachment"] = True
 
-        invalid_input_drives = []
 
-        for k, v in self.drive_chosen.items():
+        if self.cb_cpu_softlimit.currentText() == "" or self.cb_cpu_softlimit.currentText()  == "":
+            pass
+        
+        elif (self.cb_cpu_softlimit.currentText()  == "" and not self.cb_cpu_hardlimit.currentText()  == "") or (self.cb_cpu_hardlimit.currentText()  == "" and not self.cb_cpu_softlimit.currentText()  == ""):
+            warn_msg_lb += " CPU Wert wurde nicht eingegeben |"
+
+        elif int(self.cb_cpu_softlimit.currentText() ) >= int(self.cb_cpu_hardlimit.currentText() ):
+            warn_msg_lb += " CPU - Hardlimit muss größer als Softlimit sein |"
+        
+        else:
+            config["limits"]["cpu"]["soft"] = int(self.cb_cpu_softlimit.currentText())
+            config["limits"]["cpu"]["hard"] = int(self.cb_cpu_hardlimit.currentText())
+
+
+        if self.cb_ram_softlimit.currentText() == "" or self.cb_ram_softlimit.currentText()  == "":
+            pass
+        
+        elif (self.cb_ram_softlimit.currentText()  == "" and not self.cb_ram_hardlimit.currentText()  == "") or (self.cb_ram_hardlimit.currentText()  == "" and not self.cb_ram_softlimit.currentText()  == ""):
+            warn_msg_lb += " Arbeitsspeicher - Ein Wert wurde nicht eingegeben |"
+
+        elif int(self.cb_ram_softlimit.currentText() ) >= int(self.cb_ram_hardlimit.currentText()):
+            warn_msg_lb += " Arbeitsspeicher - Hardlimit muss größer als Softlimit sein |"
+        
+        else:
+            config["limits"]["ram"]["soft"] = int(self.cb_ram_softlimit.currentText())
+            config["limits"]["ram"]["hard"] = int(self.cb_ram_hardlimit.currentText())
+
+
+        for k in self.drive_chosen.keys():
 
             if self.drive_chosen[k]["soft"] == "" and self.drive_chosen[k]["hard"] == "":
-                print(f"{k} - Beide leer")
+                pass
 
             elif (self.drive_chosen[k]["soft"] == "" and not self.drive_chosen[k]["hard"] == "") or (self.drive_chosen[k]["hard"] == "" and not self.drive_chosen[k]["soft"] == ""):
-                print(f"{k} - Einer leer")
-                #invalid_input_drives.append((k, "OV"))    # OV = One Value
+                warn_msg_lb += f" {k} - Ein Wert wurde nicht eingegeben |"
 
             elif int(self.drive_chosen[k]["soft"]) >= int(self.drive_chosen[k]["hard"]):
-                print(f"{k} - Hard GT Soft")
-                #invalid_input_drives.append((k, "GT"))  # GT = Greater Than
+                warn_msg_lb += f" {k} - Hardlimit muss größer als Softlimit sein |"
             
             else:
-                print(f"{k} - Richtig")
-        print()
-        #print(self.drive_chosen)
-        #print(invalid_input_drives)
+                config["limits"]["drives"][k]["soft"] = int(self.drive_chosen[k]["soft"])
+                config["limits"]["drives"][k]["hard"] = int(self.drive_chosen[k]["hard"])
+                
 
-        """
-        if self.cb_cpu_softlimit.currentText() and self.cb_cpu_hardlimit.currentText():
+        if len(warn_msg_lb) != 1:
+            self.lb_config_warnings.setText(warn_msg_lb)
 
+        if all(must_have_inputs):
+            self.current_config = config
+            print(self.current_config)
+            return True
 
-            cpu_soft = int(self.cb_cpu_softlimit.currentText())
-            cpu_hard = int(self.cb_cpu_hardlimit.currentText())
-
-            if cpu_soft < cpu_hard:
-                config["limits"]["cpu"]["soft"] = cpu_soft
-                config["limits"]["cpu"]["hard"] = cpu_hard
-                self.lb_cpu_limit_status.setStyleSheet("color: green")
-                self.lb_cpu_limit_status.setText("Ok")
-            else:
-                self.lb_cpu_limit_status.setStyleSheet("color: red")
-                self.lb_cpu_limit_status.setText("Hardlimit muss größer sein als Softlimit.")                
-        else:
-            self.lb_cpu_limit_status.clear()
-
-
-        if self.cb_ram_softlimit.currentText() and self.cb_ram_hardlimit.currentText():
-            ram_soft = int(self.cb_ram_softlimit.currentText())
-            ram_hard = int(self.cb_ram_hardlimit.currentText())
-
-            if ram_soft < ram_hard:
-                config["limits"]["ram"]["soft"] = ram_soft
-                config["limits"]["ram"]["hard"] = ram_hard
-                self.lb_ram_limit_status.setStyleSheet("color: green")
-                self.lb_ram_limit_status.setText("Ok")
-            else:
-                self.lb_ram_limit_status.setStyleSheet("color: red")
-                self.lb_ram_limit_status.setText("Hardlimit muss größer sein als Softlimit.")                
-        else:
-            self.lb_cpu_limit_status.clear()
-
-        #print(json.dumps(config, indent=4))
-        """
 
     def cb_drives_limits_refresh(self):
         for k in self.drive_chosen.keys():
@@ -563,6 +647,30 @@ class Monitoring(QMainWindow):
         for k in self.drive_chosen.keys():
             if k == self.cb_drives_limits.currentText():
                 self.drive_chosen[k]["hard"] = self.cb_drives_hardlimit.currentText()
+
+    def validate_login(self):
+        try:
+            mailserver = smtplib.SMTP(self.le_mail_server.text(), int(self.le_mail_server_port.text()))
+            mailserver.ehlo()
+            mailserver.starttls()
+            mailserver.ehlo()
+            mailserver.login(self.le_mail_sender.text(), self.le_mail_password.text())
+            
+            self.le_mail_server.setDisabled(True)
+            self.le_mail_server_port.setDisabled(True)
+            self.le_mail_sender.setDisabled(True)
+            self.le_mail_password.setDisabled(True)
+            self.mail_access = True
+            self.lb_config_warnings.setStyleSheet("color: green")
+            self.lb_config_warnings.setText("Validierung erfolgreich")
+
+        except ValueError:
+            return False, "Port muss eine Zahl sein"
+        except smtplib.SMTPAuthenticationError:
+            return False, "Credentials sind ungültig"
+        except Exception as e:
+            return False, e
+            
 
     def initLoadFile(self):
         self.tab_loadFile = QWidget()
