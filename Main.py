@@ -20,15 +20,19 @@ class Monitoring(QMainWindow):
         self.left = 100
         self.width = 800
         self.height = 550
-        self.processes = {}
-        self.monitoring = []
-        self.drives = get_pc_information()["drives"]
-        self.drive_chosen = {}
+
+        self.processes = {}     # {<name of monitoring>: <PID>}
+        self.monitoring = []    # List with the names of monitorings for the current running monitorings (QListWigdet)
+        self.drives = get_pc_information()["drives"]    # List with all drives
+
+        self.drive_chosen = {}  # dictionary for the soft- and hardlimits
         for drive in self.drives:
             self.drive_chosen[drive] = {"soft": "", "hard": ""}
-        self.mail_access = False
-        self.initWindow()
+        self.mail_access = False    # Bool for checking if the login credentials of the mailaccount are valid
         
+        self.initWindow()   # initialize Main Window
+        
+        # if th startup_config.ini - File exists the current_configuration initialiaze
         if os.path.isfile("startup_config.ini"):
             try:
                 self.current_config = {"username": "",
@@ -40,6 +44,9 @@ class Monitoring(QMainWindow):
                                        "attachment": None,
                                        "limits": {}}
 
+                # parsing through the config-file
+                # parses through all sections of the config file, sets the values to the "self.current_config"-dictionary and fills the
+                # line-edits and combo-boxes with the values, that are written in the config file.
                 parser = ConfigParser()
                 parser.read("startup_config.ini")
 
@@ -76,7 +83,7 @@ class Monitoring(QMainWindow):
                     self.cb_attachment_sent.setCurrentText("Ja")
                 else:
                     self.cb_attachment_sent.setCurrentText("Nein")
-
+                
                 # Section "limits*""
                 for limit in parser.sections():
                     if "limits" in limit:
@@ -126,6 +133,16 @@ class Monitoring(QMainWindow):
         self.show()
 
     def initMonitoring(self):
+        """
+        Setup all the different widget. 
+        Name-convention:
+        tab_* -> QTabWidget
+        lb_* -> QLabel
+        btn_* -> QPushButton
+        le_* -> QLineEdit
+        lw_* -> QListWidget
+        """
+
         self.tab_monitoring = QWidget()
         self.tabWidget.addTab(self.tab_monitoring, "Monitoring")
 
@@ -176,6 +193,7 @@ class Monitoring(QMainWindow):
         self.lb_status.setGeometry(QRect(15, self.height-100, self.width-50, 25))
         self.lb_status.setStyleSheet("color: green")
 
+        # Connect buttons and combobox to methods
         self.btn_cpu_start_stop.clicked.connect(self.start_cpu)
         self.btn_ram_start_stop.clicked.connect(self.start_ram)
         self.btn_disk_start_stop.clicked.connect(lambda: self.start_disk(self.cb_disk_mon.currentText()))
@@ -188,12 +206,26 @@ class Monitoring(QMainWindow):
         self.start("ram", "Arbeitsspeicher", self.btn_ram_start_stop)
 
     def start_disk(self, disk):
+        """
+        :param disk: current chosen disk in the combobox
+        """
         # Initialisiere Errorlabel und Statuslabel
         self.lb_error.setText("")
         self.lb_status.setText("")
         self.lw_processes.clear()
 
+        # Only if the current_config is initialized you can start monitoring
         if self.current_config is not None:
+
+            """
+            Check if the monitoring for the current disk is running
+            if True -> Stop monitoring of this disk, the button-text change to "Start",
+            status_label-text changed, remove item from the list (for the Listwidget) and
+            remove item from the dictionary with the running processes. 
+            iterate through the monitoring list and set all the items of monitoring-list 
+            to the listwidget
+            After this return so the rest of this method will not be executed
+            """
             for d, p in self.processes.items():
                 if disk == d:
                     self.lb_status.setText(f"Beende Festplatten-Monitoring für Laufwerk: {disk}")
@@ -201,12 +233,21 @@ class Monitoring(QMainWindow):
                     psutil.Process(pid=p).terminate()
                     del self.processes[d]
                     self.monitoring.remove(f"{disk}-Laufwerk")
+
                     for mon in self.monitoring:
                         self.lw_processes.addItem(mon)
                     return
                 else:
                     continue
             
+            """
+            If the monitoring for this disk is not running:
+            status label changed, button-name set to "Stop", append the description of the monitoring to 
+            the monitoring list, starts a seperate monitoring process and creates a new dictionary entry 
+            with the name of the process and the PID
+            iterate through the monitoring list and set all the items of monitoring-list 
+            to the listwidget
+            """
             self.lb_status.setText(f"Starte Festplatten-Monitoring für Laufwerk: {disk}")
             self.btn_disk_start_stop.setText("Stopp")
             self.monitoring.append(f"{disk}-Laufwerk")
@@ -221,6 +262,9 @@ class Monitoring(QMainWindow):
             self.lb_error.setText("Wähle zuerst eine Konfiguration.")
 
     def cb_disk_mon_change(self, disk):
+        """
+        Changes the button text to "Stopp" or "Start" whether the monitoring for the current chosen disk is started or not
+        """
         if self.current_config is not None:
 
             for d in self.processes.keys():
@@ -231,12 +275,39 @@ class Monitoring(QMainWindow):
             self.btn_disk_start_stop.setText("Start")
 
     def start(self, typ, description, btn):
-        # Initialisiere Errorlabel und Statuslabel
+        """
+        :param typ: String -> "cpu" or "ram". This is the description for the processes-key
+        :param description: String -> Description the the current running processes (for the List-Widget)
+        :param btn: QPushButton-Object to change the text of the button
+        Start for either cpu-monitoring or ram-monitoring
+        """
+
+        # Initialize errorlabel und statuslabel
         self.lb_error.setText("")
         self.lb_status.setText("")
         self.lw_processes.clear()
         
+        # Only if the current_config is initialized you are able to start the monitoring
         if self.current_config is not None:
+            #print(int(self.current_config["limits"][typ]["soft"]))
+            
+            try:
+                soft = int(self.current_config["limits"][typ]["soft"])
+                hard = int(self.current_config["limits"][typ]["hard"])
+                print(soft)
+            except KeyError:
+
+                return
+
+            """
+            Check if the monitoring for is running
+            if True -> Stop monitoring , the button-text change to "Start",
+            status_label-text changed, remove item from the list (for the Listwidget) and
+            remove item from the dictionary with the running processes. 
+            iterate through the monitoring list and set all the items of monitoring-list 
+            to the listwidget
+            After this return so the rest of this method will not be executed
+            """
             for d, p in self.processes.items():
                 if typ == d:
                     self.lb_status.setText(f"Beende {description}-Monitoring")
@@ -251,6 +322,14 @@ class Monitoring(QMainWindow):
                     continue
             
 
+            """
+            If the monitoring is not running:
+            status label changed, button-name set to "Stop", append the description of the monitoring to 
+            the monitoring list, starts a seperate monitoring process and creates a new dictionary entry 
+            with the name of the process and the PID
+            iterate through the monitoring list and set all the items of monitoring-list 
+            to the listwidget
+            """
             self.lb_status.setText(f"Starte {description}-Monitoring")
             self.btn_ram_start_stop.setText("Stopp")
             self.monitoring.append(description)
@@ -266,6 +345,9 @@ class Monitoring(QMainWindow):
 
 
     def initComputerinformation(self):
+        """
+        Initializing the "Computerinformationen"-Tab and sets all the values 
+        """
         self.pc_info = get_pc_information()
         self.lb_x_value = 400
         
@@ -558,6 +640,7 @@ class Monitoring(QMainWindow):
         self.btn_validate_login.clicked.connect(self.validate_login)
 
     def get_path(self):
+        # Directory-dialog
         self.le_logs_destination_value.setText(str(QFileDialog.getExistingDirectory(self, "Ordner auswählen")))
 
     def running_config(self):
@@ -568,7 +651,6 @@ class Monitoring(QMainWindow):
             parser["DEFAULT"] = {"Pfad_Logs": self.current_config["logs_path"],
                                 "Mailadressen": self.current_config["mail_receiver"],
                                 "Attach_Logs": self.current_config["attachment"]}
-            
 
             parser["Access_to_mail"] = {"user": self.le_mail_sender.text(),
                                         "password": base64.b64encode(self.le_mail_password.text().encode("utf-8")).decode("utf-8"),
@@ -634,13 +716,20 @@ class Monitoring(QMainWindow):
                 pass
 
     def startup_config(self):
-        if os.path.isfile("running_config.ini"):
-            shutil.copy("running_config.ini", "startup_config.ini")
-        else:
-            self.running_config()
-            self.startup_config()
+        """
+        Save startupconfig
+        first save current_config, then copy the current_config.ini file to startup_config.ini file
+        """
+
+        self.running_config()
+        shutil.copy("running_config.ini", "startup_config.ini")
     
     def check_config(self):
+        """
+        onclick on the one of the save configuration buttons
+        It checks if all the necessary inputs are correct
+        """
+        
         self.lb_config_warnings.clear()
         self.lb_config_warnings.setStyleSheet("color: red")
 
@@ -649,6 +738,7 @@ class Monitoring(QMainWindow):
             return
 
         if not self.mail_access:
+
             self.lb_config_warnings.setText("Validiere zunächst den Mailzugang.")
             return
 
@@ -656,6 +746,7 @@ class Monitoring(QMainWindow):
         warn_msg_lb = "|"
         drive_chosen = {}
 
+        # temp-config
         config = {"logs_path": "",
                  "mail_receiver": "",
                  "attachment": None,
@@ -663,11 +754,13 @@ class Monitoring(QMainWindow):
                             "ram": {},
                             "drives": {}}}
 
+        # All drives appended to the temp config dictionary
         for drive in self.drives:
             config["limits"]["drives"][drive] = {}
             drive_chosen[drive] = {"soft": "", "hard": ""}
 
         
+        # must_have configs
         if self.le_logs_destination_value.text():
             config["logs_path"] = self.le_logs_destination_value.text()
         else:
@@ -686,6 +779,9 @@ class Monitoring(QMainWindow):
             config["attachment"] = True
 
 
+        # The Limits are optional. But the user is just able to start the monitoring if the limits are set
+
+        # Some checks for the limits of the cpu
         if self.cb_cpu_softlimit.currentText() == "" or self.cb_cpu_softlimit.currentText()  == "":
             pass
         
@@ -700,6 +796,7 @@ class Monitoring(QMainWindow):
             config["limits"]["cpu"]["hard"] = int(self.cb_cpu_hardlimit.currentText())
 
 
+        # Some checks for the limits of the ram
         if self.cb_ram_softlimit.currentText() == "" or self.cb_ram_softlimit.currentText()  == "":
             pass
         
@@ -714,6 +811,7 @@ class Monitoring(QMainWindow):
             config["limits"]["ram"]["hard"] = int(self.cb_ram_hardlimit.currentText())
 
 
+        # Some checks about each drive
         for k in self.drive_chosen.keys():
 
             if self.drive_chosen[k]["soft"] == "" and self.drive_chosen[k]["hard"] == "":
@@ -735,27 +833,40 @@ class Monitoring(QMainWindow):
 
         if all(must_have_inputs):
             self.current_config = config
-            print(self.current_config)
             return True
 
 
     def cb_drives_limits_refresh(self):
+        """
+        If someone changes the current text of the drive, it's checks the value of the new chosen 
+        drive and sets it to the comboboxes of the limits
+        """
         for k in self.drive_chosen.keys():
             if k == self.cb_drives_limits.currentText():
                 self.cb_drives_softlimit.setCurrentText(str(self.drive_chosen[k]["soft"]))
                 self.cb_drives_hardlimit.setCurrentText(str(self.drive_chosen[k]["hard"]))
 
     def cb_drive_soft_commit(self):
+        """
+        On change of the value of the soft limits it's written to the drive_chosen dictionary
+        """
         for k in self.drive_chosen.keys():
             if k == self.cb_drives_limits.currentText():
                 self.drive_chosen[k]["soft"] = self.cb_drives_softlimit.currentText()
 
     def cb_drive_hard_commit(self):
+        """
+        On change of the value of the hard limits it's written to the drive_chosen dictionary
+        """
         for k in self.drive_chosen.keys():
             if k == self.cb_drives_limits.currentText():
                 self.drive_chosen[k]["hard"] = self.cb_drives_hardlimit.currentText()
 
     def validate_login(self):
+        """
+        Validate the login data 
+        """
+
         self.lb_validate_login.clear()
         self.lb_config_warnings.clear()
 
@@ -765,6 +876,7 @@ class Monitoring(QMainWindow):
                 self.lb_validate_login.setText("Es müssen alle Felder ausgefüllt werden")
                 return
 
+            # Try to login. If it works the credentials are correct and the line edits getting disabled 
             mailserver = smtplib.SMTP(self.le_mail_server.text(), int(self.le_mail_server_port.text()))
             mailserver.ehlo()
             mailserver.starttls()
