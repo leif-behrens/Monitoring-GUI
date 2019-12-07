@@ -1,5 +1,5 @@
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QApplication, QLineEdit, QFileDialog, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
+from PyQt5.QtWidgets import QTableWidget, QTextBrowser, QTableWidgetItem, QApplication, QLineEdit, QFileDialog, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
 from PyQt5.QtCore import Qt, QRect
 import sys
 from functions import *
@@ -32,7 +32,7 @@ class Monitoring(QMainWindow):
         
         self.initWindow()   # initialize Main Window
         
-        # if th startup_config.ini - File exists the current_configuration initialiaze
+        # if the startup_config.ini - File exists the current_configuration initialiaze
         if os.path.isfile("startup_config.ini"):
             try:
                 self.current_config = {"username": "",
@@ -109,6 +109,9 @@ class Monitoring(QMainWindow):
 
         else:
             self.current_config = None
+        
+        
+        self.push_logs()
         
 
     def initWindow(self):
@@ -200,10 +203,10 @@ class Monitoring(QMainWindow):
         self.cb_disk_mon.currentTextChanged.connect(lambda: self.cb_disk_mon_change(self.cb_disk_mon.currentText()))
 
     def start_cpu(self):
-        self.start("cpu", "CPU", self.btn_cpu_start_stop)
+        self.start("cpu", "CPU", self.btn_cpu_start_stop, mon_cpu)
        
     def start_ram(self):
-        self.start("ram", "Arbeitsspeicher", self.btn_ram_start_stop)
+        self.start("ram", "Arbeitsspeicher", self.btn_ram_start_stop, mon_memory)
 
     def start_disk(self, disk):
         """
@@ -212,10 +215,37 @@ class Monitoring(QMainWindow):
         # Initialisiere Errorlabel und Statuslabel
         self.lb_error.setText("")
         self.lb_status.setText("")
-        self.lw_processes.clear()
+        
 
         # Only if the current_config is initialized you can start monitoring
         if self.current_config is not None:
+            try:
+                username = self.current_config["username"]
+                pwd = base64.b64decode(self.current_config["password"]).decode("utf-8")
+                server = self.current_config["server"]
+                port = self.current_config["port"]
+                logs = self.current_config["logs_path"]
+
+                if not os.path.isdir(logs):
+                    raise FileNotFoundError
+
+                attachment = self.current_config["attachment"]
+                mail_receiver = self.current_config["mail_receiver"]
+
+                soft = int(self.current_config["limits"][disk]["soft"])
+                hard = int(self.current_config["limits"][disk]["hard"])
+
+            except KeyError:
+                self.lb_error.setText(f"{disk}-Limits sind nicht konfiguriert.")
+                return
+            except FileNotFoundError:
+                self.lb_error.setText("Logs-Pfad existiert nicht (mehr)")
+                return
+            except Exception as e:
+                self.lb_error.setText(f"Fehler: {e}")
+                return
+
+            self.lw_processes.clear()
 
             """
             Check if the monitoring for the current disk is running
@@ -252,7 +282,9 @@ class Monitoring(QMainWindow):
             self.btn_disk_start_stop.setText("Stopp")
             self.monitoring.append(f"{disk}-Laufwerk")
 
-            process = multiprocessing.Process(target=mon_disk, args=(1, "logs", "info@leifbehrens.de", True, 70, 80))
+            process = multiprocessing.Process(target=mon_disk, 
+                                              args=(disk, logs, mail_receiver, attachment, soft, 
+                                                    hard, username, pwd, server, port))
             process.start()
             self.processes[disk] = process.pid
 
@@ -274,7 +306,7 @@ class Monitoring(QMainWindow):
 
             self.btn_disk_start_stop.setText("Start")
 
-    def start(self, typ, description, btn):
+    def start(self, typ, description, btn, function):
         """
         :param typ: String -> "cpu" or "ram". This is the description for the processes-key
         :param description: String -> Description the the current running processes (for the List-Widget)
@@ -283,22 +315,38 @@ class Monitoring(QMainWindow):
         """
 
         # Initialize errorlabel und statuslabel
-        self.lb_error.setText("")
-        self.lb_status.setText("")
-        self.lw_processes.clear()
+        self.lb_error.clear()
+        self.lb_status.clear()
         
         # Only if the current_config is initialized you are able to start the monitoring
         if self.current_config is not None:
-            #print(int(self.current_config["limits"][typ]["soft"]))
-            
+
             try:
+                username = self.current_config["username"]
+                pwd = base64.b64decode(self.current_config["password"]).decode("utf-8")
+                server = self.current_config["server"]
+                port = self.current_config["port"]
+                logs = self.current_config["logs_path"]
+
+                if not os.path.isdir(logs):
+                    raise FileNotFoundError
+
+                attachment = self.current_config["attachment"]
+                mail_receiver = self.current_config["mail_receiver"]
+
                 soft = int(self.current_config["limits"][typ]["soft"])
                 hard = int(self.current_config["limits"][typ]["hard"])
-                print(soft)
+
             except KeyError:
-
+                self.lb_error.setText(f"{description}-Limits sind nicht konfiguriert.")
                 return
-
+            except FileNotFoundError:
+                self.lb_error.setText("Logs-Pfad existiert nicht (mehr)")
+                return
+            except Exception as e:
+                self.lb_error.setText(f"Fehler: {e}")
+                return
+            
             """
             Check if the monitoring for is running
             if True -> Stop monitoring , the button-text change to "Start",
@@ -331,10 +379,12 @@ class Monitoring(QMainWindow):
             to the listwidget
             """
             self.lb_status.setText(f"Starte {description}-Monitoring")
-            self.btn_ram_start_stop.setText("Stopp")
+            btn.setText("Stopp")
             self.monitoring.append(description)
 
-            process = multiprocessing.Process(target=mon_memory, args=(1, "logs", "info@leifbehrens.de", True, 70, 80))
+            process = multiprocessing.Process(target=function, 
+                                              args=(logs, mail_receiver, attachment, soft, hard, 
+                                                    username, pwd, server, port))
             process.start()
             self.processes[typ] = process.pid
 
@@ -342,7 +392,6 @@ class Monitoring(QMainWindow):
                 self.lw_processes.addItem(mon)
         else:
             self.lb_error.setText("Wähle zuerst eine Konfiguration.")
-
 
     def initComputerinformation(self):
         """
@@ -470,7 +519,27 @@ class Monitoring(QMainWindow):
     def initLogs(self):
         self.tab_logs = QWidget()
         self.tabWidget.addTab(self.tab_logs, "Logs")
-    
+
+        self.tb_logs = QTextBrowser(self.tab_logs)
+        self.tb_logs.setGeometry(QRect(15, 15, self.width-40, self.height-100))
+
+        self.btn_refresh_logs = QPushButton(self.tab_logs)
+        self.btn_refresh_logs.setGeometry(QRect(self.width/2-25, self.height-75, 50, 50))
+        self.btn_refresh_logs.setIcon(QtGui.QIcon("refresh.jpg"))
+
+        self.btn_refresh_logs.clicked.connect(self.push_logs)
+
+    def push_logs(self):
+        if self.current_config is not None:
+            try:
+                logs_path = self.current_config["logs_path"] + "/limits.log"
+                if os.path.isfile(logs_path):
+                    with open(logs_path) as f:
+                        logs = f.read()
+                    self.tb_logs.setText(logs)
+            except:
+                pass
+
     def initConfig(self):
         self.tab_config = QWidget()
         self.tabWidget.addTab(self.tab_config, "Konfigurieren")
@@ -768,6 +837,18 @@ class Monitoring(QMainWindow):
             warn_msg_lb += " Ungültiger Pfad zum Speichern der Logs* |"
         
         if self.le_mail_receiver.text():
+            # Check if the addresses are reachable
+            try:
+                server = smtplib.SMTP(self.le_mail_server.text(), int(self.le_mail_server_port.text()))
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(self.le_mail_sender.text(), self.le_mail_password.text())
+                server.sendmail(self.le_mail_sender.text(), self.le_mail_receiver.text().split(";"), "Validiere")
+            except:
+                must_have_inputs.append(False)
+                warn_msg_lb += " Ungültige Adresse(n)* |"
+
             config["mail_receiver"] = self.le_mail_receiver.text()
         else:
             must_have_inputs.append(False)
@@ -913,6 +994,8 @@ class Monitoring(QMainWindow):
     def __del__(self):
         try:
             os.remove("running_config.ini")
+            for pid in self.processes.items():
+                psutil.Process(pid).terminate()
         except:
             pass
 
