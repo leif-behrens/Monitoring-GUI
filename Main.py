@@ -1,7 +1,7 @@
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QTableWidget, QTextBrowser, QTableWidgetItem, QApplication, QLineEdit, QFileDialog, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
 from PyQt5.QtCore import Qt, QRect
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QTextCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, QPushButton
 import sys
 from functions import *
@@ -18,6 +18,7 @@ import matplotlib.animation as animation
 from matplotlib import style
 from matplotlib.ticker import MaxNLocator
 import pickle
+import glob
 
 
 class Monitoring(QMainWindow):
@@ -122,6 +123,31 @@ class Monitoring(QMainWindow):
         
         self.push_logs()
         
+        
+
+    def closeEvent(self, event):
+        """
+        If closing the window
+        """
+
+        try:
+            # Delete running_config.ini File
+            if os.path.isfile("running_config.ini"):
+                os.remove("running_config.ini")
+
+            # Kill all (monitoring) processes
+            for pid in self.processes.values():
+                try:
+                    psutil.Process(pid).terminate()
+                except:
+                    continue
+            
+            # Delete all pickle-Files
+            for f in glob.glob("*.pickle"):
+                os.remove(f)
+            
+        except:
+            pass
 
     def initWindow(self):
         # Mainwindow Einstellungen
@@ -138,7 +164,7 @@ class Monitoring(QMainWindow):
         self.initComputerinformation()
         self.initLogs()        
         self.initConfig()        
-        self.initLoadFile()
+        self.initCurrentUtilization()
         self.initGraph()
         
         # Anzeige der GUI
@@ -269,12 +295,21 @@ class Monitoring(QMainWindow):
                 if disk == d:
                     self.lb_status.setText(f"Beende Festplatten-Monitoring für Laufwerk: {disk}")
                     self.btn_disk_start_stop.setText("Start")
-                    psutil.Process(pid=p).terminate()
-                    del self.processes[d]
-                    self.monitoring.remove(f"{disk}-Laufwerk")
+                    try:
+                        psutil.Process(pid=p).terminate()
 
+                        del self.processes[d]
+                        self.monitoring.remove(f"{disk}-Laufwerk")
+                    except Exception as e:
+                        print(e)
                     for mon in self.monitoring:
                         self.lw_processes.addItem(mon)
+
+                    try:
+                        os.remove(f"mon_{disk.replace(':', '')}.pickle")
+                    except Exception as e:
+                        print(e)
+
                     return
                 else:
                     continue
@@ -375,7 +410,10 @@ class Monitoring(QMainWindow):
                     del self.processes[d]
                     self.monitoring.remove(description)
 
-                    os.remove(f"{function.__name__}.pickle")
+                    try:
+                        os.remove(f"mon_{typ}.pickle")
+                    except Exception as e:
+                        print(e)
 
                     for mon in self.monitoring:
                         self.lw_processes.addItem(mon)
@@ -531,12 +569,15 @@ class Monitoring(QMainWindow):
         self.btn_save_json.setGeometry(QRect(150, 450, 130, 25))
         self.btn_save_json.setText("JSON-Datei speichern")
 
+        #self.btn_refresh.clicked.connect()
+
     def initLogs(self):
         self.tab_logs = QWidget()
         self.tabWidget.addTab(self.tab_logs, "Logs")
 
         self.tb_logs = QTextBrowser(self.tab_logs)
         self.tb_logs.setGeometry(QRect(15, 15, self.width-40, self.height-100))
+        self.tb_logs.setStyleSheet("font-size: 8pt")
 
         self.btn_refresh_logs = QPushButton(self.tab_logs)
         self.btn_refresh_logs.setGeometry(QRect(self.width/2-25, self.height-75, 50, 50))
@@ -552,6 +593,7 @@ class Monitoring(QMainWindow):
                     with open(logs_path) as f:
                         logs = f.read()
                     self.tb_logs.setText(logs)
+                    self.tb_logs.moveCursor(QtGui.QTextCursor.End)
             except:
                 pass
 
@@ -730,6 +772,8 @@ class Monitoring(QMainWindow):
     def running_config(self):
         # Check, ob alle Eingaben in Ordnung sind
         if self.check_config():
+
+            # If True, write the current_config.ini-File
             parser = ConfigParser()
 
             parser["DEFAULT"] = {"Pfad_Logs": self.current_config["logs_path"],
@@ -759,6 +803,7 @@ class Monitoring(QMainWindow):
                 parser.write(c)
 
 
+            # read the config file and set the data to a dictionary 
             try:
                 self.current_config = {"username": "",
                                        "password": "",
@@ -795,6 +840,7 @@ class Monitoring(QMainWindow):
                         else:
                             self.current_config["limits"][limit[-2:]] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
 
+                self.lb_validate_login.setStyleSheet("color: green")
                 self.lb_validate_login.setText("Laufende Konfiguration gespeichert")
             except:
                 pass
@@ -807,6 +853,9 @@ class Monitoring(QMainWindow):
 
         self.running_config()
         shutil.copy("running_config.ini", "startup_config.ini")
+
+        self.lb_validate_login.setStyleSheet("color: green")
+        self.lb_validate_login.setText("Startup Konfiguration gespeichert")
     
     def check_config(self):
         """
@@ -816,6 +865,7 @@ class Monitoring(QMainWindow):
         
         self.lb_config_warnings.clear()
         self.lb_config_warnings.setStyleSheet("color: red")
+        self.lb_validate_login.clear()
 
         if self.processes:
             self.lb_config_warnings.setText("Beende zunächst alle Monitorings.")
@@ -996,33 +1046,71 @@ class Monitoring(QMainWindow):
             self.lb_validate_login.setStyleSheet("color: red")
             self.lb_validate_login.setText(f"Folgender Fehler: {e}")
             
-    def initLoadFile(self):
-        self.tab_loadFile = QWidget()
-        self.tabWidget.addTab(self.tab_loadFile, "Lade Datei")
+    def initCurrentUtilization(self):
+        self.tab_current_utilization = QWidget()
+        self.tabWidget.addTab(self.tab_current_utilization, "Auslastungen")
+
+        self.lb_cpu_utilization_description = QLabel(self.tab_current_utilization)
+        self.lb_cpu_utilization_description.setGeometry(QRect(15, 15, 200, 25))
+        self.lb_cpu_utilization_description.setText("CPU-Auslastung")
+
+
+        self.lb_ram_utilization_description = QLabel(self.tab_current_utilization)
+        self.lb_ram_utilization_description.setGeometry(QRect(15, 50, 200, 25))
+        self.lb_ram_utilization_description.setText("Arbeitsspeicher-Auslastung")
+
+        y = 85
+        for drive in self.drives:
+            self.lb_drive_utilization_description = QLabel(self.tab_current_utilization)
+            self.lb_drive_utilization_description.setGeometry(QRect(15, y, 200, 25))
+            self.lb_drive_utilization_description.setText(f"Laufwerk {drive}")
+            
+            y += 35
+
+
+
+        """
+            self.lb_cpu_utilization_value = QLabel(self.tab_current_utilization)
+            self.lb_cpu_utilization_value.setGeometry(QRect(200, 15, 400, 25))
+            self.lb_ram_utilization_value = QLabel(self.tab_current_utilization)
+            self.lb_ram_utilization_value.setGeometry(QRect(200, 50, 400, 25))
+
+            y = 85 
+
+            for drive in self.drives:
+                self.lb_drive_utilization_value = QLabel(self.tab_current_utilization)
+                self.lb_drive_utilization_value.setGeometry(QRect(200, y, 400, 25))
+
+                y += 35
+        """
 
     def initGraph(self):
         self.tab_graph = QWidget()
         self.tabWidget.addTab(self.tab_graph, "Graph")
 
-        self.graph = PlotCanvas(self.tab_graph, width=8, height=5)
-        self.graph.move(0,0)
 
-    def __del__(self):
-        try:
-            if os.path.isfile("running_config.ini"):
-                os.remove("running_config.ini")
-                for pid in self.processes.items():
-                    psutil.Process(pid).terminate()
-            
-            if os.path.isfile("mon_cpu.pickle"):
-                os.remove("mon_cpu.pickle")
-        except:
-            pass
+        self.tab_graph_mon = QTabWidget(self.tab_graph)
+        self.tab_graph_mon.setGeometry(QRect(0, 0, self.width, self.height))
+        
+
+        self.tab_graph_mon_cpu = QWidget()
+        self.tab_graph_mon.addTab(self.tab_graph_mon_cpu, "CPU")
+        PlotCanvas(self.tab_graph_mon_cpu, width=6, height=4, pickle_file="mon_cpu.pickle").move(50, 50)
+
+        self.tab_graph_mon_ram = QWidget()
+        self.tab_graph_mon.addTab(self.tab_graph_mon_ram, "Arbeitsspeicher")
+        PlotCanvas(self.tab_graph_mon_ram, width=6, height=4, pickle_file="mon_ram.pickle").move(50, 50)
+
+        for drive in self.drives:
+            self.tab_current_drive = QWidget()
+            self.tab_graph_mon.addTab(self.tab_current_drive, f"Laufwerk {drive}")
+            PlotCanvas(self.tab_current_drive, width=6, height=4, pickle_file=f"mon_{drive.replace(':', '')}.pickle").move(50, 50)
 
 
 class PlotCanvas(FigureCanvas):
 
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+    def __init__(self, parent=None, width=5, height=4, dpi=100, pickle_file=None):
+        self.file = pickle_file
 
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axis = self.fig.add_subplot(1, 1, 1)
@@ -1043,9 +1131,9 @@ class PlotCanvas(FigureCanvas):
 
     def animate(self, i):
         
-        if os.path.isfile("mon_cpu.pickle"):
+        if os.path.isfile(self.file):
             try:
-                with open("mon_cpu.pickle", "rb") as p:
+                with open(self.file, "rb") as p:
                     xs, ys = pickle.load(p)
 
                 # Scaling is in int, not float
@@ -1053,8 +1141,7 @@ class PlotCanvas(FigureCanvas):
                 self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
 
                 self.axis.clear()
-                self.axis.plot(xs, ys, color="g")
-                #self.axis.plot(xs1, ys1)
+                self.axis.plot(xs, ys)
 
             except:
                 pass
