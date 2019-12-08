@@ -16,6 +16,7 @@ import winsound
 import json
 import base64
 from configparser import ConfigParser
+import pickle
 
 
 class ValueTooHighOrTooLowException(Exception):
@@ -248,32 +249,32 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
         while True:
             disk_usage = get_disk_usage(disk)
             name = f"Festplattennutzung Laufwerk {disk}"
-            file = f"{logs_destination}/limits.log"
+            f = f"{logs_destination}/limits.log"
             
             if soft <= disk_usage["percent"] < hard:
                 logtype = "warning"
                 log_msg = f"| Hostname: {socket.gethostname()} | {name} >= {soft} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
                 
-                log(name, file, logtype, log_msg)
+                log(name, f, logtype, log_msg)
 
                 start = time.time()
                 
-                while soft <= disk_usage < hard:
-                    disk_usage = get_disk_usage(disk)["percent"]
+                while soft <= disk_usage["percent"] < hard:
+                    disk_usage = get_disk_usage(disk)
                     time.sleep(.1)
                 
                 end = time.time()
                 
-                log(f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}", file, "info", f"{str(round((end-start), 2))} s")
+                log(f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}", f, "info", f"{str(round((end-start), 2))} s")
                 
                 
             if disk_usage["percent"] >= hard:
                 name = f"Festplattennutzung Laufwerk {disk}"
-                file = f"{logs_destination}/limits.log"
+                f = f"{logs_destination}/limits.log"
                 logtype = "critical"
                 log_msg = f"| Hostname: {socket.gethostname()} | {name} >= {hard} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
 
-                log(name, file, logtype, log_msg)
+                log(name, f, logtype, log_msg)
                 
                 mail_msg = f"Warnung: Die Festplattennutzung liegt bei {disk_usage['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
@@ -281,13 +282,13 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                 
                 start = time.time()
                 
-                while disk_usage["percent"] >= hard:
-                    disk_usage = get_disk_usage(disk)["percent"]
-                    time.sleep(.1)
+                # while disk_usage["percent"] >= hard:
+                #     disk_usage = get_disk_usage(disk)["percent"]
+                #     time.sleep(.1)
                 
                 end = time.time()
                 
-                log(f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}", file, "info", f"{str(round((end-start), 2))} s")
+                log(f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}", f, "info", f"{str(round((end-start), 2))} s")
                 
             time.sleep(1)
 
@@ -297,32 +298,62 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
 
 def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
     try:
+        cpu_values = []
+        t = []
+
+        vals = [t, cpu_values]
+        t_int = 0
+
         while True:
+            t_int += 1
             cpu = psutil.cpu_percent()
+            cpu_values.append(cpu)
+            t.append(t_int)
+
+            print(cpu)
+            if len(cpu_values) > 10:
+                del cpu_values[0]
+                del t[0]
+
+            with open("mon_cpu.pickle", "wb") as p:
+                pickle.dump(vals, p)
+
             name = f"CPU-Auslastung"
-            file = f"{logs_destination}/limits.log"
+            f = f"{logs_destination}/limits.log"
 
             if soft <= cpu < hard:
                 logtype = "warning"
                 log_msg = f"| Hostname: {socket.gethostname()} | CPU-Auslastung >= {soft} % | Aktuelle Auslastung: {cpu} %"
 
-                log(name, file, logtype, log_msg)
+                log(name, f, logtype, log_msg)
 
                 start = time.time()
                 
                 while soft <= cpu < hard:
                     cpu = psutil.cpu_percent()
-                    time.sleep(.1)
+
+                    t_int += 1
+                    cpu_values.append(cpu)
+                    t.append(t_int)
+
+                    if len(cpu_values) > 10:
+                        del cpu_values[0]
+                        del t[0]
+
+                    with open("mon_cpu.pickle", "wb") as p:
+                        pickle.dump(vals, p)
+
+                    time.sleep(1)
                 
                 end = time.time()
                 
-                log("Dauer der letzten CPU-Auslastung", file, "info", f"{str(round((end-start), 2))} s")
+                log("Dauer der letzten CPU-Auslastung", f, "info", f"{str(round((end-start), 2))} s")
                 
             if cpu >= hard:
                 logtype = "critical"
                 log_msg = f"| Hostname: {socket.gethostname()} | CPU-Auslastung >= {hard} % | Aktuelle Auslastung: {cpu} %"
 
-                log(name, file, logtype, log_msg)
+                log(name, f, logtype, log_msg)
 
                 mail_msg = f"Warnung: Die CPU-Auslastung liegt bei {cpu} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
                 sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
@@ -331,30 +362,64 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
                 
                 while cpu >= hard:
                     cpu = psutil.cpu_percent()
-                    time.sleep(.1)
+
+                    t_int += 1
+                    cpu_values.append(cpu)
+                    t.append(t_int)
+
+                    if len(cpu_values) > 10:
+                        del cpu_values[0]
+                        del t[0]
+
+                    with open("mon_cpu.pickle", "wb") as p:
+                        pickle.dump(vals, p)
+
+                    time.sleep(1)
                 
                 end = time.time()
                 
-                log("Dauer der letzten CPU-Auslastung", file, "info", f"{str(round((end-start), 2))} s")
+                log("Dauer der letzten CPU-Auslastung", f, "info", f"{str(round((end-start), 2))} s")
                 
             time.sleep(1)
 
     except Exception as e:
-        print(f"Festplattennutzungs-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
+        if os.path.isfile("mon_cpu.pickle"):
+            os.remove("mon_cpu.pickle")
+        print(f"CPU-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
 
 
 def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
+    memory_values = []
+    t = []
+
+    vals = [t, memory_values]
+    t_int = 0
+
     try:
         while True:
             virtual_memory = get_virtual_memory()
+
+            memory_values.append(virtual_memory["percent"])
+            t.append(t_int)
+
+            print(virtual_memory["percent"])
+
+            if len(memory_values) > 10:
+                del memory_values[0]
+                del t[0]
+
+            with open("mon_ram.pickle", "wb") as p:
+                pickle.dump(vals, p)
+
+
             name = f"Arbeitsspeichernutzung"
-            file = f"{logs_destination}/limits.log"
+            f = f"{logs_destination}/limits.log"
 
             if soft <= virtual_memory["percent"] < hard:
                 logtype = "warning"
                 log_msg = f"Hostname: {socket.gethostname()} | Festplattennutzung > {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
-                log(name, file, logtype, log_msg)
+                log(name, f, logtype, log_msg)
 
                 start = time.time()
                 
@@ -364,13 +429,13 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                 
                 end = time.time()
                 
-                log("Dauer der letzten Arbeitsspeicher-Auslastung", file, "info", str(round((end-start), 2)))
+                log("Dauer der letzten Arbeitsspeicher-Auslastung", f, "info", str(round((end-start), 2)))
                 
             if virtual_memory["percent"] >= hard:
                 logtype = "critical"
                 log_msg = f"Hostname: {socket.gethostname()} | Festplattennutzung höher als {hard} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
-                log(name, file, logtype, log_msg)
+                log(name, f, logtype, log_msg)
 
                 mail_msg = f"Warnung: Die Festplattennutzung liegt bei {virtual_memory['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
@@ -384,13 +449,12 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                 
                 end = time.time()
                 
-                log("Dauer", file, "info", str(round((end-start), 2)))
+                log("Dauer", f, "info", str(round((end-start), 2)))
                 
             time.sleep(1)
 
     except Exception as e:
         print("Festplattennutzungs-Monitoring wurde beendet. Genaue Fehlerbeschreibung:", e)
-
 
 
 def show_hardware_information():
