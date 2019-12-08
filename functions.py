@@ -246,9 +246,28 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
     # While-Schleife, die permanent überprüft, ob ein Limit überschritten ist. Nach jedem Schleifendurchlauf "schläft"
     # der Prozess in der Mainfunction für eine Sekunde.
     try:
+
+        disk_values = []
+        t = []
+
+        vals = [t, disk_values]
+        t_int = 0
+            
         while True:
+            t_int += 1
             disk_usage = get_disk_usage(disk)
-            name = f"Festplattennutzung Laufwerk {disk}"
+            disk_values.append(disk_usage["percent"])
+            t.append(t_int)
+
+            if len(disk_values) > 10:
+                del disk_values[0]
+                del t[0]
+            
+            with open(f"mon_{disk.replace(':', '')}.pickle", "wb") as p:
+                pickle.dump(vals, p)
+
+            
+            name = f"Laufwerk {disk}-Auslastung"
             f = f"{logs_destination}/limits.log"
             
             if soft <= disk_usage["percent"] < hard:
@@ -260,8 +279,19 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                 start = time.time()
                 
                 while soft <= disk_usage["percent"] < hard:
+                    t_int += 1
                     disk_usage = get_disk_usage(disk)
-                    time.sleep(.1)
+                    disk_values.append(disk_usage["percent"])
+                    t.append(t_int)
+
+                    if len(disk_values) > 10:
+                        del disk_values[0]
+                        del t[0]
+                    
+                    with open(f"mon_{disk.replace(':', '')}.pickle", "wb") as p:
+                        pickle.dump(vals, p)
+
+                    time.sleep(1)
                 
                 end = time.time()
                 
@@ -269,7 +299,7 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                 
                 
             if disk_usage["percent"] >= hard:
-                name = f"Festplattennutzung Laufwerk {disk}"
+                name = f"Laufwerk {disk}-Auslastung"
                 f = f"{logs_destination}/limits.log"
                 logtype = "critical"
                 log_msg = f"| Hostname: {socket.gethostname()} | {name} >= {hard} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
@@ -282,10 +312,21 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                 
                 start = time.time()
                 
-                # while disk_usage["percent"] >= hard:
-                #     disk_usage = get_disk_usage(disk)["percent"]
-                #     time.sleep(.1)
-                
+                while disk_usage["percent"] >= hard:
+                    t_int += 1
+                    disk_usage = get_disk_usage(disk)
+                    disk_values.append(disk_usage["percent"])
+                    t.append(t_int)
+
+                    if len(disk_values) > 10:
+                        del disk_values[0]
+                        del t[0]
+                    
+                    with open(f"mon_{disk.replace(':', '')}.pickle", "wb") as p:
+                        pickle.dump(vals, p)
+
+                    time.sleep(1)
+
                 end = time.time()
                 
                 log(f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}", f, "info", f"{str(round((end-start), 2))} s")
@@ -293,6 +334,8 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
             time.sleep(1)
 
     except Exception as e:
+        if os.path.isfile(f"mon_{disk.replace(':', '')}.pickle"):
+            os.remove(f"mon_{disk.replace(':', '')}.pickle")
         print(f"Festplattennutzungs-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
         
 
@@ -308,15 +351,15 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
             t_int += 1
             cpu = psutil.cpu_percent()
             cpu_values.append(cpu)
-            t.append(t_int)
-
-            print(cpu)
+            t.append(t_int)           
+            
             if len(cpu_values) > 10:
                 del cpu_values[0]
                 del t[0]
 
             with open("mon_cpu.pickle", "wb") as p:
                 pickle.dump(vals, p)
+
 
             name = f"CPU-Auslastung"
             f = f"{logs_destination}/limits.log"
@@ -330,9 +373,8 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
                 start = time.time()
                 
                 while soft <= cpu < hard:
-                    cpu = psutil.cpu_percent()
-
                     t_int += 1
+                    cpu = psutil.cpu_percent()                   
                     cpu_values.append(cpu)
                     t.append(t_int)
 
@@ -397,12 +439,10 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
 
     try:
         while True:
+            t_int += 1
             virtual_memory = get_virtual_memory()
-
             memory_values.append(virtual_memory["percent"])
             t.append(t_int)
-
-            print(virtual_memory["percent"])
 
             if len(memory_values) > 10:
                 del memory_values[0]
@@ -411,29 +451,39 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
             with open("mon_ram.pickle", "wb") as p:
                 pickle.dump(vals, p)
 
-
             name = f"Arbeitsspeichernutzung"
             f = f"{logs_destination}/limits.log"
 
             if soft <= virtual_memory["percent"] < hard:
                 logtype = "warning"
-                log_msg = f"Hostname: {socket.gethostname()} | Festplattennutzung > {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
+                log_msg = f"| Hostname: {socket.gethostname()} | Festplattennutzung > {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
                 log(name, f, logtype, log_msg)
 
                 start = time.time()
                 
                 while soft <= virtual_memory["percent"] < hard:
-                    virtual_memory = get_virtual_memory()["percent"]
-                    time.sleep(.1)
+                    t_int += 1
+                    virtual_memory = get_virtual_memory()
+                    memory_values.append(virtual_memory["percent"])
+                    t.append(t_int)
+
+                    if len(memory_values) > 10:
+                        del memory_values[0]
+                        del t[0]
+
+                    with open("mon_ram.pickle", "wb") as p:
+                        pickle.dump(vals, p)
+
+                    time.sleep(1)
                 
                 end = time.time()
                 
-                log("Dauer der letzten Arbeitsspeicher-Auslastung", f, "info", str(round((end-start), 2)))
+                log("Dauer der letzten Arbeitsspeicher-Auslastung", f, "info", f"{str(round((end-start), 2))} s")
                 
             if virtual_memory["percent"] >= hard:
                 logtype = "critical"
-                log_msg = f"Hostname: {socket.gethostname()} | Festplattennutzung höher als {hard} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
+                log_msg = f"| Hostname: {socket.gethostname()} | Festplattennutzung höher als {hard} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
                 log(name, f, logtype, log_msg)
 
@@ -444,16 +494,29 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                 start = time.time()
                 
                 while virtual_memory["percent"] >= hard:
-                    virtual_memory = get_virtual_memory()["percent"]
-                    time.sleep(.1)
+                    t_int += 1
+                    virtual_memory = get_virtual_memory()
+                    memory_values.append(virtual_memory["percent"])
+                    t.append(t_int)
+
+                    if len(memory_values) > 10:
+                        del memory_values[0]
+                        del t[0]
+
+                    with open("mon_ram.pickle", "wb") as p:
+                        pickle.dump(vals, p)
+
+                    time.sleep(1)
                 
                 end = time.time()
                 
-                log("Dauer", f, "info", str(round((end-start), 2)))
+                log("Dauer", f, "info", f"{str(round((end-start), 2))} s")
                 
             time.sleep(1)
 
     except Exception as e:
+        if os.path.isfile("mon_ram.pickle"):
+            os.remove("mon_ram.pickle")
         print("Festplattennutzungs-Monitoring wurde beendet. Genaue Fehlerbeschreibung:", e)
 
 
