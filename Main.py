@@ -1,6 +1,8 @@
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QTableWidget, QTextBrowser, QTableWidgetItem, QApplication, QLineEdit, QFileDialog, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
 from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, QPushButton
 import sys
 from functions import *
 import psutil
@@ -9,6 +11,13 @@ import json
 import smtplib
 import base64
 import shutil
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib import style
+from matplotlib.ticker import MaxNLocator
+import pickle
 
 
 class Monitoring(QMainWindow):
@@ -347,6 +356,8 @@ class Monitoring(QMainWindow):
                 self.lb_error.setText(f"Fehler: {e}")
                 return
             
+            self.lw_processes.clear()
+            
             """
             Check if the monitoring for is running
             if True -> Stop monitoring , the button-text change to "Start",
@@ -363,8 +374,12 @@ class Monitoring(QMainWindow):
                     psutil.Process(pid=p).terminate()
                     del self.processes[d]
                     self.monitoring.remove(description)
+
+                    os.remove(f"{function.__name__}.pickle")
+
                     for mon in self.monitoring:
                         self.lw_processes.addItem(mon)
+                    
                     return
                 else:
                     continue
@@ -916,7 +931,6 @@ class Monitoring(QMainWindow):
             self.current_config = config
             return True
 
-
     def cb_drives_limits_refresh(self):
         """
         If someone changes the current text of the drive, it's checks the value of the new chosen 
@@ -982,7 +996,6 @@ class Monitoring(QMainWindow):
             self.lb_validate_login.setStyleSheet("color: red")
             self.lb_validate_login.setText(f"Folgender Fehler: {e}")
             
-
     def initLoadFile(self):
         self.tab_loadFile = QWidget()
         self.tabWidget.addTab(self.tab_loadFile, "Lade Datei")
@@ -991,13 +1004,63 @@ class Monitoring(QMainWindow):
         self.tab_graph = QWidget()
         self.tabWidget.addTab(self.tab_graph, "Graph")
 
+        self.graph = PlotCanvas(self.tab_graph, width=8, height=5)
+        self.graph.move(0,0)
+
     def __del__(self):
         try:
-            os.remove("running_config.ini")
-            for pid in self.processes.items():
-                psutil.Process(pid).terminate()
+            if os.path.isfile("running_config.ini"):
+                os.remove("running_config.ini")
+                for pid in self.processes.items():
+                    psutil.Process(pid).terminate()
+            
+            if os.path.isfile("mon_cpu.pickle"):
+                os.remove("mon_cpu.pickle")
         except:
             pass
+
+
+class PlotCanvas(FigureCanvas):
+
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axis = self.fig.add_subplot(1, 1, 1)
+
+        FigureCanvas.__init__(self, self.fig)
+        self.setParent(parent)
+
+        FigureCanvas.setSizePolicy(self,
+                QSizePolicy.Expanding,
+                QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
+
+        # Scaling is in int, not float
+        self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
+        self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+        self.ani = animation.FuncAnimation(self.fig, self.animate, interval=1000)
+
+    def animate(self, i):
+        
+        if os.path.isfile("mon_cpu.pickle"):
+            try:
+                with open("mon_cpu.pickle", "rb") as p:
+                    xs, ys = pickle.load(p)
+
+                # Scaling is in int, not float
+                self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
+                self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+                self.axis.clear()
+                self.axis.plot(xs, ys, color="g")
+                #self.axis.plot(xs1, ys1)
+
+            except:
+                pass
+
+            
+
 
 
 if __name__ == "__main__":
