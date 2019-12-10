@@ -1,8 +1,7 @@
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QTableWidget, QTextBrowser, QTableWidgetItem, QApplication, QLineEdit, QFileDialog, QListWidget, QMainWindow, QFrame, QTabWidget, QWidget, QPushButton, QLabel, QComboBox
+from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QIcon, QTextCursor
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, QPushButton
 import sys
 from functions import *
 import psutil
@@ -314,6 +313,14 @@ class Monitoring(QMainWindow):
                 else:
                     continue
             
+            try:
+                # Check if disk is available (in case it's a network disk which is disconnected)
+                psutil.disk_usage(disk)
+            except Exception as e:
+                self.lb_error.setStyleSheet("color: red")
+                self.lb_error.setText(e)
+                return
+
             """
             If the monitoring for this disk is not running:
             status label changed, button-name set to "Stop", append the description of the monitoring to 
@@ -431,6 +438,7 @@ class Monitoring(QMainWindow):
             iterate through the monitoring list and set all the items of monitoring-list 
             to the listwidget
             """
+
             self.lb_status.setText(f"Starte {description}-Monitoring")
             btn.setText("Stopp")
             self.monitoring.append(description)
@@ -574,6 +582,9 @@ class Monitoring(QMainWindow):
     def initLogs(self):
         self.tab_logs = QWidget()
         self.tabWidget.addTab(self.tab_logs, "Logs")
+
+        self.tab_logs_all = QTabWidget(self.tab_logs)
+        self.tab_logs_all.setGeometry(QRect(0, 0, self.width, self.height))
 
         self.tb_logs = QTextBrowser(self.tab_logs)
         self.tb_logs.setGeometry(QRect(15, 15, self.width-40, self.height-100))
@@ -1112,8 +1123,15 @@ class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100, pickle_file=None):
         self.file = pickle_file
 
+        self.start_time = 0
+
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axis = self.fig.add_subplot(1, 1, 1)
+        
+        self.axis.get_xaxis().set_visible(False)
+
+        self.axis.set_ylim(ymin=0, ymax=100)
+        self.axis.set_ylabel("Auslastung in %")
 
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
@@ -1123,26 +1141,32 @@ class PlotCanvas(FigureCanvas):
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-        # Scaling is in int, not float
-        self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
-        self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
-
         self.ani = animation.FuncAnimation(self.fig, self.animate, interval=1000)
 
     def animate(self, i):
-        
         if os.path.isfile(self.file):
+            if self.start_time == 0:
+                self.start_time = time.time()
             try:
                 with open(self.file, "rb") as p:
                     xs, ys = pickle.load(p)
 
+                y_mean = [sum(ys)/len(ys)] * len(ys)
+
                 # Scaling is in int, not float
                 self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
                 self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
-
+                
                 self.axis.clear()
-                self.axis.plot(xs, ys)
+                self.axis.set_ylim(ymin=0, ymax=100)
 
+                self.axis.get_xaxis().set_visible(False)
+
+                self.axis.set_ylabel("Auslastung in %")
+                self.axis.plot(xs, ys, label=f"Auslastung nach {round(time.time()-self.start_time)} s")
+                self.axis.plot(xs, y_mean, label="Average Auslastung", linestyle="--")
+
+                self.axis.legend(loc='upper left')
             except:
                 pass
 
