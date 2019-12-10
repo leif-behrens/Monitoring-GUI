@@ -584,14 +584,27 @@ class Monitoring(QMainWindow):
         self.tabWidget.addTab(self.tab_logs, "Logs")
 
         self.tab_logs_all = QTabWidget(self.tab_logs)
-        self.tab_logs_all.setGeometry(QRect(0, 0, self.width, self.height))
+        self.tab_logs_all.setGeometry(QRect(0, 0, self.width, self.height-50))
+        
+        self.tab_logs_threshold_limits = QWidget(self.tab_logs_all)
+        self.tab_logs_all.addTab(self.tab_logs_threshold_limits, "Schwelle überschritten")
+        
 
-        self.tb_logs = QTextBrowser(self.tab_logs)
-        self.tb_logs.setGeometry(QRect(15, 15, self.width-40, self.height-100))
-        self.tb_logs.setStyleSheet("font-size: 8pt")
+        self.tb_logs_threshold_limits = QTextBrowser(self.tab_logs_threshold_limits)
+        self.tb_logs_threshold_limits.setGeometry(QRect(15, 15, self.width-40, 450))
+        self.tb_logs_threshold_limits.setStyleSheet("font-size: 8pt")
+
+
+        self.tab_logs_system_logs = QWidget()
+        self.tab_logs_all.addTab(self.tab_logs_system_logs, "Systemlogs")
+
+        self.tb_logs_system_logs = QTextBrowser(self.tab_logs_system_logs)
+        self.tb_logs_system_logs.setGeometry(QRect(15, 15, self.width-40, 450))
+        self.tb_logs_system_logs.setStyleSheet("font-size: 8pt")
+
 
         self.btn_refresh_logs = QPushButton(self.tab_logs)
-        self.btn_refresh_logs.setGeometry(QRect(self.width/2-25, self.height-75, 50, 50))
+        self.btn_refresh_logs.setGeometry(QRect(15, self.height-50, 50, 25))
         self.btn_refresh_logs.setIcon(QtGui.QIcon("refresh.jpg"))
 
         self.btn_refresh_logs.clicked.connect(self.push_logs)
@@ -603,8 +616,8 @@ class Monitoring(QMainWindow):
                 if os.path.isfile(logs_path):
                     with open(logs_path) as f:
                         logs = f.read()
-                    self.tb_logs.setText(logs)
-                    self.tb_logs.moveCursor(QtGui.QTextCursor.End)
+                    self.tb_logs_threshold_limits.setText(logs)
+                    self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
             except:
                 pass
 
@@ -1123,7 +1136,7 @@ class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100, pickle_file=None):
         self.file = pickle_file
 
-        self.start_time = 0
+        #self.start_time = 0
 
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axis = self.fig.add_subplot(1, 1, 1)
@@ -1145,8 +1158,8 @@ class PlotCanvas(FigureCanvas):
 
     def animate(self, i):
         if os.path.isfile(self.file):
-            if self.start_time == 0:
-                self.start_time = time.time()
+            #if self.start_time == 0:
+                #self.start_time = time.time()
             try:
                 with open(self.file, "rb") as p:
                     xs, ys = pickle.load(p)
@@ -1163,13 +1176,20 @@ class PlotCanvas(FigureCanvas):
                 self.axis.get_xaxis().set_visible(False)
 
                 self.axis.set_ylabel("Auslastung in %")
-                self.axis.plot(xs, ys, label=f"Auslastung nach {round(time.time()-self.start_time)} s")
+                self.axis.plot(xs, ys, label=f"Auslastung")# nach {round(time.time()-self.start_time)} s")
                 self.axis.plot(xs, y_mean, label="Average Auslastung", linestyle="--")
 
                 self.axis.legend(loc='upper left')
             except:
                 pass
+        else:
+            self.axis.clear()
 
+            # Scaling is in int, not float
+            self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
+            self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
+            self.axis.set_ylabel("Auslastung in %")
+            self.axis.set_ylim(ymin=0, ymax=100)
             
 
 
