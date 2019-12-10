@@ -259,7 +259,7 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
             disk_values.append(disk_usage["percent"])
             t.append(t_int)
 
-            if len(disk_values) > 10:
+            if len(disk_values) > 60:
                 del disk_values[0]
                 del t[0]
             
@@ -284,7 +284,7 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                     disk_values.append(disk_usage["percent"])
                     t.append(t_int)
 
-                    if len(disk_values) > 10:
+                    if len(disk_values) > 60:
                         del disk_values[0]
                         del t[0]
                     
@@ -318,7 +318,7 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                     disk_values.append(disk_usage["percent"])
                     t.append(t_int)
 
-                    if len(disk_values) > 10:
+                    if len(disk_values) > 60:
                         del disk_values[0]
                         del t[0]
                     
@@ -353,7 +353,7 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
             cpu_values.append(cpu)
             t.append(t_int)           
             
-            if len(cpu_values) > 10:
+            if len(cpu_values) > 60:
                 del cpu_values[0]
                 del t[0]
 
@@ -378,7 +378,7 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
                     cpu_values.append(cpu)
                     t.append(t_int)
 
-                    if len(cpu_values) > 10:
+                    if len(cpu_values) > 60:
                         del cpu_values[0]
                         del t[0]
 
@@ -409,7 +409,7 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
                     cpu_values.append(cpu)
                     t.append(t_int)
 
-                    if len(cpu_values) > 10:
+                    if len(cpu_values) > 60:
                         del cpu_values[0]
                         del t[0]
 
@@ -444,7 +444,7 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
             memory_values.append(virtual_memory["percent"])
             t.append(t_int)
 
-            if len(memory_values) > 10:
+            if len(memory_values) > 60:
                 del memory_values[0]
                 del t[0]
 
@@ -468,7 +468,7 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                     memory_values.append(virtual_memory["percent"])
                     t.append(t_int)
 
-                    if len(memory_values) > 10:
+                    if len(memory_values) > 60:
                         del memory_values[0]
                         del t[0]
 
@@ -499,7 +499,7 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                     memory_values.append(virtual_memory["percent"])
                     t.append(t_int)
 
-                    if len(memory_values) > 10:
+                    if len(memory_values) > 60:
                         del memory_values[0]
                         del t[0]
 
