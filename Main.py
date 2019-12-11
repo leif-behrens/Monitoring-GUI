@@ -38,6 +38,8 @@ class Monitoring(QMainWindow):
         for drive in self.drives:
             self.drive_chosen[drive] = {"soft": "", "hard": ""}
         self.mail_access = False    # Bool for checking if the login credentials of the mailaccount are valid
+
+        log("Logs/system.log", "info", "Programm gestartet")
         
         self.initWindow()   # initialize Main Window
         
@@ -75,6 +77,7 @@ class Monitoring(QMainWindow):
                 self.le_mail_sender.setDisabled(True)
                 self.le_mail_password.setDisabled(True)
                 self.mail_access = True
+
 
                 # Section "DEFAULT"
                 self.current_config["logs_path"] = parser["DEFAULT"]["pfad_logs"]
@@ -115,13 +118,14 @@ class Monitoring(QMainWindow):
             except Exception as e:
                 self.lb_config_warnings.setStyleSheet("color: red")
                 self.lb_config_warnings.setText(e)
+                log("Logs/system.log", "error", f"Initialisierung running_config schlug fehl: {e}")
 
         else:
             self.current_config = None
+            log("Logs/system.log", "info", f"current_config.ini existiert nicht")
         
         
         self.push_logs()
-        
         
 
     def closeEvent(self, event):
@@ -133,20 +137,27 @@ class Monitoring(QMainWindow):
             # Delete running_config.ini File
             if os.path.isfile("running_config.ini"):
                 os.remove("running_config.ini")
+                log("Logs/system.log", "info", "running_config.ini-Datei wurde gelöscht")
 
             # Kill all (monitoring) processes
-            for pid in self.processes.values():
+            for mon, pid in self.processes.items():
                 try:
                     psutil.Process(pid).terminate()
+                    log("Logs/system.log", "info", f"{mon}-Monitoring wurde beendet. Prozess-ID: {pid}")
                 except:
-                    continue
+                    log("Logs/system.log", "info", f"{mon}-Monitoring mit der Prozess-ID {pid} war bereits beendet")
             
             # Delete all pickle-Files
             for f in glob.glob("*.pickle"):
                 os.remove(f)
+                log("Logs/system.log", "info", f"{f}-Datei wurde gelöscht")
             
-        except:
-            pass
+        except Exception as e:
+            log("Logs/system.log", "debug", f"Programm beenden - Folgender Fehler ist aufgetreten: {e}")
+        
+        else:
+            log("Logs/system.log", "info", "Programm beendet")
+            
 
     def initWindow(self):
         # Mainwindow Einstellungen
@@ -271,12 +282,15 @@ class Monitoring(QMainWindow):
 
             except KeyError:
                 self.lb_error.setText(f"{disk}-Limits sind nicht konfiguriert.")
+                log("Logs/system.log", "error", f"Starten Laufwerk {disk}-Monitorings schlug fehl. Limits sind nicht konfiguriert")
                 return
             except FileNotFoundError:
                 self.lb_error.setText("Logs-Pfad existiert nicht (mehr)")
+                log("Logs/system.log", "error", f"Log-Pfad '{logs}' zur Speicherung der Schwellenwert-Überschreitungen-Logs extistiert nicht")
                 return
             except Exception as e:
                 self.lb_error.setText(f"Fehler: {e}")
+                log("Logs/system.log", "error", f"Aktuelle Konfiguration konnte nicht initiiert werden. Fehler: {e}")
                 return
 
             self.lw_processes.clear()
@@ -292,22 +306,26 @@ class Monitoring(QMainWindow):
             """
             for d, p in self.processes.items():
                 if disk == d:
-                    self.lb_status.setText(f"Beende Festplatten-Monitoring für Laufwerk: {disk}")
-                    self.btn_disk_start_stop.setText("Start")
                     try:
                         psutil.Process(pid=p).terminate()
-
                         del self.processes[d]
                         self.monitoring.remove(f"{disk}-Laufwerk")
+                        self.lb_status.setText(f"Beende Festplatten-Monitoring für Laufwerk: {disk}")
+                        self.btn_disk_start_stop.setText("Start")
+                        log("Logs/monitoring.log", "info", f"Laufwerk {disk}-Monitoring wurde beendet. Prozess-ID: {p}")
+
                     except Exception as e:
-                        print(e)
+                        log("Logs/monitoring.log", "error", f"Laufwerk {disk}-Monitoring beenden schlug fehl. Fehler: {e}")
+
                     for mon in self.monitoring:
                         self.lw_processes.addItem(mon)
 
                     try:
                         os.remove(f"mon_{disk.replace(':', '')}.pickle")
+                        log("Logs/system.log", "info", f"mon_{disk.replace(':', '')}.pickle-Datei wurde gelöscht")
+
                     except Exception as e:
-                        print(e)
+                        log("Logs/system.log", "error", f"mon_{disk.replace(':', '')}.pickle-Datei konnte nicht gelöscht werden. Fehler: {e}")
 
                     return
                 else:
@@ -319,6 +337,7 @@ class Monitoring(QMainWindow):
             except Exception as e:
                 self.lb_error.setStyleSheet("color: red")
                 self.lb_error.setText(e)
+                log("Logs/monitoring.log", "info", "Überprüfung, ob alle Laufwerke erreichbar sind --> True")
                 return
 
             """
@@ -329,20 +348,28 @@ class Monitoring(QMainWindow):
             iterate through the monitoring list and set all the items of monitoring-list 
             to the listwidget
             """
-            self.lb_status.setText(f"Starte Festplatten-Monitoring für Laufwerk: {disk}")
-            self.btn_disk_start_stop.setText("Stopp")
-            self.monitoring.append(f"{disk}-Laufwerk")
+            try:
+                process = multiprocessing.Process(target=mon_disk, 
+                                                args=(disk, logs, mail_receiver, attachment, soft, 
+                                                        hard, username, pwd, server, port))
+                process.start()
+                self.processes[disk] = process.pid
 
-            process = multiprocessing.Process(target=mon_disk, 
-                                              args=(disk, logs, mail_receiver, attachment, soft, 
-                                                    hard, username, pwd, server, port))
-            process.start()
-            self.processes[disk] = process.pid
+                self.lb_status.setText(f"Starte Festplatten-Monitoring für Laufwerk: {disk}")
+                self.btn_disk_start_stop.setText("Stopp")
+                self.monitoring.append(f"{disk}-Laufwerk")
 
-            for mon in self.monitoring:
-                self.lw_processes.addItem(mon)
+                for mon in self.monitoring:
+                    self.lw_processes.addItem(mon)
+
+                log("Logs/monitoring.log", "info", f"Laufwerk {disk}-Monitoring wurde gestartet. Prozess-ID: {process.pid}")
+
+            except Exception as e:
+                log("Logs/monitoring.log", "error", f"Laufwerk {disk}-Monitoring konnte nicht gestartet werden. Fehler: {e}")
+
         else:
             self.lb_error.setText("Wähle zuerst eine Konfiguration.")
+            log("Logs/monitoring.log", "info", f"Laufwerk {disk}-Monitoring konnte nicht gestartet werden - keine Konifguration vorhanden")
 
     def cb_disk_mon_change(self, disk):
         """
@@ -390,12 +417,15 @@ class Monitoring(QMainWindow):
 
             except KeyError:
                 self.lb_error.setText(f"{description}-Limits sind nicht konfiguriert.")
+                log("Logs/system.log", "error", f"Starten {typ.upper()}-Monitorings schlug fehl. Limits sind nicht konfiguriert")
                 return
             except FileNotFoundError:
                 self.lb_error.setText("Logs-Pfad existiert nicht (mehr)")
+                log("Logs/system.log", "error", f"Log-Pfad '{logs}' zur Speicherung der Schwellenwert-Überschreitungen-Logs extistiert nicht")
                 return
             except Exception as e:
                 self.lb_error.setText(f"Fehler: {e}")
+                log("Logs/system.log", "error", f"Aktuelle Konfiguration konnte nicht initiiert werden. Fehler: {e}")
                 return
             
             self.lw_processes.clear()
@@ -411,16 +441,20 @@ class Monitoring(QMainWindow):
             """
             for d, p in self.processes.items():
                 if typ == d:
-                    self.lb_status.setText(f"Beende {description}-Monitoring")
-                    btn.setText("Start")
+                    
                     psutil.Process(pid=p).terminate()
                     del self.processes[d]
                     self.monitoring.remove(description)
+                    self.lb_status.setText(f"Beende {description}-Monitoring")
+                    btn.setText("Start")
+                    log("Logs/monitoring.log", "info", f"{typ.upper()}-Monitoring wurde beendet. Prozess-ID: {p}")
 
                     try:
                         os.remove(f"mon_{typ}.pickle")
+                        log("Logs/system.log", "info", f"mon_{typ}.pickle-Datei wurde gelöscht")
+
                     except Exception as e:
-                        print(e)
+                        log("Logs/system.log", "error", f"mon_{typ}.pickle-Datei konnte nicht gelöscht werden. Fehler: {e}")
 
                     for mon in self.monitoring:
                         self.lw_processes.addItem(mon)
@@ -428,7 +462,6 @@ class Monitoring(QMainWindow):
                     return
                 else:
                     continue
-            
 
             """
             If the monitoring is not running:
@@ -438,21 +471,28 @@ class Monitoring(QMainWindow):
             iterate through the monitoring list and set all the items of monitoring-list 
             to the listwidget
             """
+            try:
+                self.lb_status.setText(f"Starte {description}-Monitoring")
+                btn.setText("Stopp")
+                self.monitoring.append(description)
 
-            self.lb_status.setText(f"Starte {description}-Monitoring")
-            btn.setText("Stopp")
-            self.monitoring.append(description)
+                process = multiprocessing.Process(target=function, 
+                                                args=(logs, mail_receiver, attachment, soft, hard, 
+                                                        username, pwd, server, port))
+                process.start()
+                self.processes[typ] = process.pid
 
-            process = multiprocessing.Process(target=function, 
-                                              args=(logs, mail_receiver, attachment, soft, hard, 
-                                                    username, pwd, server, port))
-            process.start()
-            self.processes[typ] = process.pid
+                for mon in self.monitoring:
+                    self.lw_processes.addItem(mon)                
+                
+                log("Logs/monitoring.log", "info", f"{typ.upper()}-Monitoring wurde gestartet. Prozess-ID: {process.pid}")
 
-            for mon in self.monitoring:
-                self.lw_processes.addItem(mon)
+            except Exception as e:
+                log("Logs/monitoring.log", "error", f"{typ.upper()}-Monitoring konnte nicht gestartet werden. Fehler: {e}")
+
         else:
             self.lb_error.setText("Wähle zuerst eine Konfiguration.")
+            log("Logs/monitoring.log", "info", f"{typ.upper()}-Monitoring konnte nicht gestartet werden - keine Konifguration vorhanden")
 
     def initComputerinformation(self):
         """
@@ -795,7 +835,9 @@ class Monitoring(QMainWindow):
 
     def running_config(self):
         # Check, ob alle Eingaben in Ordnung sind
-        if self.check_config():
+        self.current_config = self.check_config()
+
+        if self.current_config:
 
             # If True, write the current_config.ini-File
             parser = ConfigParser()
@@ -825,6 +867,11 @@ class Monitoring(QMainWindow):
 
             with open("running_config.ini", "w") as c:
                 parser.write(c)
+
+            self.lb_validate_login.setStyleSheet("color: green")
+            self.lb_validate_login.setText("Laufende Konfiguration gespeichert")
+            
+            log("Logs/system.log", "info", "running_config.ini wurde geschrieben")
 
 
             # read the config file and set the data to a dictionary 
@@ -864,10 +911,9 @@ class Monitoring(QMainWindow):
                         else:
                             self.current_config["limits"][limit[-2:]] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
 
-                self.lb_validate_login.setStyleSheet("color: green")
-                self.lb_validate_login.setText("Laufende Konfiguration gespeichert")
-            except:
-                pass
+                log("Logs/system.log", "info", f"running_config.ini-Datei erfolgreich geparsed")
+            except Exception as e:
+                log("Logs/system.log", "error", f"running_config.ini-Datei konnte nicht erfolgreich geparsed werden. Fehler: {e}")
 
     def startup_config(self):
         """
@@ -876,17 +922,24 @@ class Monitoring(QMainWindow):
         """
 
         self.running_config()
-        shutil.copy("running_config.ini", "startup_config.ini")
+        try:
+            shutil.copy("running_config.ini", "startup_config.ini")            
+            self.lb_validate_login.setStyleSheet("color: green")
+            self.lb_validate_login.setText("Startup Konfiguration gespeichert")
+            log("Logs/system.log", "info", "startup_config.ini erfolgreich erstellt")
 
-        self.lb_validate_login.setStyleSheet("color: green")
-        self.lb_validate_login.setText("Startup Konfiguration gespeichert")
+        except Exception as e:
+            log("Logs/system.log", "info", f"startup_config.ini konnte nicht erstellt werden. Fehler: {e}")
+
+        
     
     def check_config(self):
         """
         onclick on the one of the save configuration buttons
         It checks if all the necessary inputs are correct
         """
-        
+        self.current_config = None
+        log("Logs/system.log", "info", "Starte Überprüfung Konfigurationsdateien")
         self.lb_config_warnings.clear()
         self.lb_config_warnings.setStyleSheet("color: red")
         self.lb_validate_login.clear()
@@ -896,7 +949,6 @@ class Monitoring(QMainWindow):
             return
 
         if not self.mail_access:
-
             self.lb_config_warnings.setText("Validiere zunächst den Mailzugang.")
             return
 
@@ -927,6 +979,7 @@ class Monitoring(QMainWindow):
         
         if self.le_mail_receiver.text():
             # Check if the addresses are reachable
+
             try:
                 server = smtplib.SMTP(self.le_mail_server.text(), int(self.le_mail_server_port.text()))
                 server.ehlo()
@@ -934,11 +987,14 @@ class Monitoring(QMainWindow):
                 server.ehlo()
                 server.login(self.le_mail_sender.text(), self.le_mail_password.text())
                 server.sendmail(self.le_mail_sender.text(), self.le_mail_receiver.text().split(";"), "Validiere")
-            except:
+                server.quit()
+                config["mail_receiver"] = self.le_mail_receiver.text()
+                log("Logs/system.log", "info", f"Validierung der Empfänger-Mailadressen '{self.le_mail_receiver.text()}' erfolgreich")
+            except Exception as e:
                 must_have_inputs.append(False)
-                warn_msg_lb += " Ungültige Adresse(n)* |"
+                warn_msg_lb += " Adressen konnten nicht erreicht werden* |"
+                log("Logs/system.log", "error", f"Validierung der Empfänger-Mailadressen '{self.le_mail_receiver.text()}' fehlgeschlagen. Fehler: {e}")
 
-            config["mail_receiver"] = self.le_mail_receiver.text()
         else:
             must_have_inputs.append(False)
             warn_msg_lb += " Keine Mailadresse angegeben* |"
@@ -1002,8 +1058,9 @@ class Monitoring(QMainWindow):
             self.lb_config_warnings.setText(warn_msg_lb)
 
         if all(must_have_inputs):
-            self.current_config = config
-            return True
+            return config
+        else:
+            return None
 
     def cb_drives_limits_refresh(self):
         """
@@ -1191,8 +1248,6 @@ class PlotCanvas(FigureCanvas):
             self.axis.set_ylabel("Auslastung in %")
             self.axis.set_ylim(ymin=0, ymax=100)
             
-
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
