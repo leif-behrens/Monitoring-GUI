@@ -161,7 +161,7 @@ def sendmail(receiver, sender, message, subject, username, password, smtp_server
         return False
 
 
-def log(name, file, logtype, msg):
+def log(file, logtype, msg):
     """
     :param name: Name des Loggers
     :param file: Das File, wo der Log-Eintrag hingeschrieben wird
@@ -169,22 +169,29 @@ def log(name, file, logtype, msg):
     :param msg: Zusätzliche Message/Informationen
     :return:
     """
+    name = socket.gethostname()
 
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.DEBUG)    
 
-    formatter = logging.Formatter("%(name)s\t%(levelname)s\t%(asctime)s\t%(message)s")
+    formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(name)s\t%(message)s")
 
     filehandler = logging.FileHandler(file)
     filehandler.setLevel(logging.DEBUG)
     filehandler.setFormatter(formatter)
 
+    streamhandler = logging.StreamHandler()
+    streamhandler.setFormatter(formatter)
+
     logger.addHandler(filehandler)
+    logger.addHandler(streamhandler)
+    
 
     logtypes = ["debug", "info", "warning", "error", "critical"]
 
     if logtype not in logtypes:
         logtype = "debug"
+
     if logtype == "debug":
         logger.debug(msg)
     elif logtype == "info":
@@ -195,36 +202,10 @@ def log(name, file, logtype, msg):
         logger.error(msg)
     elif logtype == "critical":
         logger.critical(msg)
-
-    del logger
-
-
-def warn_message(limit, levelname, typ, func):
-    """
-    :param limit: Soft- oder Hardlimit
-    :param levelname: e.g. Warning, Critical etc.
-    :param typ: Typ der Überwachung (CPU, Memory etc.)
-    :param func: Die Funktion (get_cpu_usage, get_disk_usage etc.)
-    :return: None
-    """
-
-    # Wenn ein Limit überschritten ist, wird zunächst ein Warnsound ausgegeben.
-    winsound.Beep(1000, 500)
-
-    # Wenn ein Limit überschritten wird, popt eine Warnbox auf
-    if typ == "disk":
-        ctypes.windll.user32.MessageBoxW(0, f"{levelname}: Speichernutzung höher als {limit} % - {func['used']} GiB von"
-                                            f" {func['total']} GiB --> {func['percent']} %", "Festplattennutzung - "
-                                                                                             "Warnung", 0)
-
-    elif typ == "memory":
-        ctypes.windll.user32.MessageBoxW(0, f"{levelname}: Arbeitsspeichernutzung höher als {limit} % - {func['used']} "
-                                            f"GiB von {func['total']} GiB --> {func['percent']} %",
-                                            "Arbeitsspeichernutzung - Warnung", 0)
-
-    elif typ == "cpu":
-        ctypes.windll.user32.MessageBoxW(0, f"{levelname}: CPU-Auslastung höher als {limit} % --> {func} %",
-                                            "CPU-Auslastung - Warnung", 0)
+    
+    del logger.handlers[:]
+    return
+    
 
 
 def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
@@ -271,10 +252,11 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
             f = f"{logs_destination}/limits.log"
             
             if soft <= disk_usage["percent"] < hard:
+
                 logtype = "warning"
-                log_msg = f"| Hostname: {socket.gethostname()} | {name} >= {soft} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
+                log_msg = f"| {name} >= {soft} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
                 
-                log(name, f, logtype, log_msg)
+                log(f, logtype, log_msg)
 
                 start = time.time()
                 
@@ -295,20 +277,23 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                 
                 end = time.time()
                 
-                log(f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}", f, "info", f"{str(round((end-start), 2))} s")
+                log(f, "info", f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}: {str(round((end-start), 2))} s")
                 
                 
-            if disk_usage["percent"] >= hard:
-                name = f"Laufwerk {disk}-Auslastung"
-                f = f"{logs_destination}/limits.log"
-                logtype = "critical"
-                log_msg = f"| Hostname: {socket.gethostname()} | {name} >= {hard} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
+            elif disk_usage["percent"] >= hard:
 
-                log(name, f, logtype, log_msg)
+                logtype = "critical"
+                log_msg = f"| {name} >= {hard} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
+
+                log(f, logtype, log_msg)
                 
                 mail_msg = f"Warnung: Die Festplattennutzung liegt bei {disk_usage['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
-                sendmail(mail_addresses, user, mail_msg, name, user, password, server, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+                try:
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+                
+                except Exception as e:
+                    log(f"{logs_destination}/mail.log", "error", f"Festplattennutzung {disk.replace(':', '')}: Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
                 
                 start = time.time()
                 
@@ -329,14 +314,14 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
 
                 end = time.time()
                 
-                log(f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}", f, "info", f"{str(round((end-start), 2))} s")
+                log(f, "info", f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}:{str(round((end-start), 2))} s")
                 
             time.sleep(1)
 
     except Exception as e:
         if os.path.isfile(f"mon_{disk.replace(':', '')}.pickle"):
             os.remove(f"mon_{disk.replace(':', '')}.pickle")
-        print(f"Festplattennutzungs-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
+        log(f"{logs_destination}/system.log", "error", f"Laufwerk {disk.replace(':', '')}-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
         
 
 def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
@@ -365,10 +350,11 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
             f = f"{logs_destination}/limits.log"
 
             if soft <= cpu < hard:
-                logtype = "warning"
-                log_msg = f"| Hostname: {socket.gethostname()} | CPU-Auslastung >= {soft} % | Aktuelle Auslastung: {cpu} %"
 
-                log(name, f, logtype, log_msg)
+                logtype = "warning"
+                log_msg = f"| CPU-Auslastung >= {soft} % | Aktuelle Auslastung: {cpu} %"
+
+                log(f, logtype, log_msg)
 
                 start = time.time()
                 
@@ -389,17 +375,23 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
                 
                 end = time.time()
                 
-                log("Dauer der letzten CPU-Auslastung", f, "info", f"{str(round((end-start), 2))} s")
+                log(f, "info", f"Dauer der letzten CPU-Auslastung: {str(round((end-start), 2))} s")
                 
-            if cpu >= hard:
-                logtype = "critical"
-                log_msg = f"| Hostname: {socket.gethostname()} | CPU-Auslastung >= {hard} % | Aktuelle Auslastung: {cpu} %"
+            elif cpu >= hard:
 
-                log(name, f, logtype, log_msg)
+                logtype = "critical"
+                log_msg = f"| CPU-Auslastung >= {hard} % | Aktuelle Auslastung: {cpu} %"
+
+                log(f, logtype, log_msg)
 
                 mail_msg = f"Warnung: Die CPU-Auslastung liegt bei {cpu} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
-                sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
-                   
+
+                try:
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+
+                except Exception as e:
+                    log(f"{logs_destination}/mail.log", "error", f"CPU - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")   
+                
                 start = time.time()
                 
                 while cpu >= hard:
@@ -420,14 +412,14 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
                 
                 end = time.time()
                 
-                log("Dauer der letzten CPU-Auslastung", f, "info", f"{str(round((end-start), 2))} s")
+                log(f, "info", f"Dauer der letzten CPU-Auslastung: {str(round((end-start), 2))} s")
                 
             time.sleep(1)
 
     except Exception as e:
         if os.path.isfile("mon_cpu.pickle"):
             os.remove("mon_cpu.pickle")
-        print(f"CPU-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
+        log(f"{logs_destination}/system.log", "error", f"CPU-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
 
 
 def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
@@ -455,8 +447,9 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
             f = f"{logs_destination}/limits.log"
 
             if soft <= virtual_memory["percent"] < hard:
+
                 logtype = "warning"
-                log_msg = f"| Hostname: {socket.gethostname()} | Festplattennutzung > {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
+                log_msg = f"| {name} >= {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
                 log(name, f, logtype, log_msg)
 
@@ -479,17 +472,22 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                 
                 end = time.time()
                 
-                log("Dauer der letzten Arbeitsspeicher-Auslastung", f, "info", f"{str(round((end-start), 2))} s")
+                log(f, "info", f"Dauer der letzten Arbeitsspeicher-Auslastung: {str(round((end-start), 2))} s")
                 
-            if virtual_memory["percent"] >= hard:
+            elif virtual_memory["percent"] >= hard:
+
                 logtype = "critical"
-                log_msg = f"| Hostname: {socket.gethostname()} | Festplattennutzung höher als {hard} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
+                log_msg = f"| {name} >= {hard} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
-                log(name, f, logtype, log_msg)
+                log(f, logtype, log_msg)
 
-                mail_msg = f"Warnung: Die Festplattennutzung liegt bei {virtual_memory['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
+                mail_msg = f"Warnung: Die {name} liegt bei {virtual_memory['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
-                sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+                try:
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+
+                except Exception as e:
+                    log(f"{logs_destination}/mail.log", "error", f"Arbeitsspeicher - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
                    
                 start = time.time()
                 
@@ -510,14 +508,14 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                 
                 end = time.time()
                 
-                log("Dauer", f, "info", f"{str(round((end-start), 2))} s")
+                log(f, "info", f"Dauer der letzten Arbeitsspeicher-Auslastung: {str(round((end-start), 2))} s")
                 
             time.sleep(1)
 
     except Exception as e:
         if os.path.isfile("mon_ram.pickle"):
             os.remove("mon_ram.pickle")
-        print("Festplattennutzungs-Monitoring wurde beendet. Genaue Fehlerbeschreibung:", e)
+        log(f"{logs_destination}/system.log", "error", f"Arbeitsspeicher-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
 
 
 def show_hardware_information():
