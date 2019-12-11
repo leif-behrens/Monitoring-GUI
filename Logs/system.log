@@ -1,0 +1,102 @@
+2019-12-11 21:27:26,445	INFO	lbehrens	Programm gestartet
+2019-12-11 21:27:28,401	ERROR	lbehrens	mon_ram.pickle-Datei konnte nicht gelöscht werden. Fehler: [WinError 2] Das System kann die angegebene Datei nicht finden: 'mon_ram.pickle'
+2019-12-11 21:27:31,130	INFO	lbehrens	mon_ram.pickle-Datei wurde gelöscht
+2019-12-11 21:27:31,530	ERROR	lbehrens	mon_ram.pickle-Datei konnte nicht gelöscht werden. Fehler: [WinError 2] Das System kann die angegebene Datei nicht finden: 'mon_ram.pickle'
+2019-12-11 21:27:36,604	INFO	lbehrens	mon_ram.pickle-Datei wurde gelöscht
+2019-12-11 21:27:45,188	INFO	lbehrens	mon_G.pickle-Datei wurde gelöscht
+2019-12-11 21:27:48,642	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-11 21:27:48,645	INFO	lbehrens	cpu-Monitoring mit der Prozess-ID 2268 wurde beendet
+2019-12-11 21:27:48,661	INFO	lbehrens	B:-Monitoring mit der Prozess-ID 11588 wurde beendet
+2019-12-11 21:27:48,667	INFO	lbehrens	mon_B.pickle-Datei wurde gelöscht
+2019-12-11 21:27:48,682	INFO	lbehrens	mon_cpu.pickle-Datei wurde gelöscht
+2019-12-11 21:27:48,685	INFO	lbehrens	Programm beendet
+2019-12-11 21:30:57,582	INFO	lbehrens	Programm gestartet
+2019-12-11 21:31:03,839	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-11 21:31:03,846	INFO	lbehrens	B:-Monitoring mit der Prozess-ID 14828 wurde beendet
+2019-12-11 21:31:03,860	INFO	lbehrens	Programm beendet
+2019-12-11 21:48:12,171	INFO	lbehrens	Programm gestartet
+2019-12-11 21:48:13,903	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-11 21:48:13,909	INFO	lbehrens	Programm beendet
+2019-12-11 21:48:28,603	INFO	lbehrens	Programm gestartet
+2019-12-11 21:48:29,210	INFO	lbehrens	current_config.ini existiert nicht
+2019-12-11 21:49:32,276	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:49:32,727	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.deasda' erfolgreich
+2019-12-11 21:49:41,141	ERROR	lbehrens	Starten Laufwerk B:-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:49:42,581	ERROR	lbehrens	Starten Laufwerk B:-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:49:42,817	ERROR	lbehrens	Starten Laufwerk B:-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:49:43,902	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:49:44,305	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:49:46,334	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:49:46,982	ERROR	lbehrens	Starten RAM-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:49:47,249	ERROR	lbehrens	Starten RAM-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:50:30,458	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:50:30,897	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.deasda' erfolgreich
+2019-12-11 21:50:35,019	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:50:35,334	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:50:35,606	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:50:35,847	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:50:36,207	ERROR	lbehrens	Starten RAM-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:50:37,387	ERROR	lbehrens	Starten Laufwerk B:-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:50:43,164	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:50:43,602	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.deasda' erfolgreich
+2019-12-11 21:52:56,918	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-11 21:52:56,925	INFO	lbehrens	Programm beendet
+2019-12-11 21:52:59,835	INFO	lbehrens	Programm gestartet
+2019-12-11 21:53:00,430	INFO	lbehrens	current_config.ini existiert nicht
+2019-12-11 21:53:03,387	INFO	lbehrens	Programm beendet
+2019-12-11 21:56:04,691	INFO	lbehrens	Programm gestartet
+2019-12-11 21:56:05,324	INFO	lbehrens	current_config.ini existiert nicht
+2019-12-11 21:56:14,311	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:56:40,890	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:56:45,570	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:56:45,974	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:56:57,317	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:57:05,701	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:57:05,996	ERROR	lbehrens	Validierung der Empfänger-Mailadressen 'sdfvdsvsdv' fehlgeschlagen. Fehler: {'sdfvdsvsdv': (550, b'5.1.1 <sdfvdsvsdv>: Recipient address rejected: User unknown in virtual alias table')}
+2019-12-11 21:57:30,968	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:57:31,417	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.com' erfolgreich
+2019-12-11 21:57:35,656	ERROR	lbehrens	Starten RAM-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:57:36,800	ERROR	lbehrens	Starten RAM-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-11 21:57:39,897	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:57:40,338	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.comaydsc' erfolgreich
+2019-12-11 21:58:17,190	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-11 21:58:17,197	INFO	lbehrens	Programm beendet
+2019-12-11 21:58:23,362	INFO	lbehrens	Programm gestartet
+2019-12-11 21:58:23,947	INFO	lbehrens	current_config.ini existiert nicht
+2019-12-11 21:58:41,383	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:58:56,649	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:58:57,115	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.com' erfolgreich
+2019-12-11 21:59:02,210	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 21:59:02,675	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.comsdaf' erfolgreich
+2019-12-11 22:01:18,619	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-11 22:01:18,626	INFO	lbehrens	Programm beendet
+2019-12-11 22:01:21,860	INFO	lbehrens	Programm gestartet
+2019-12-11 22:01:22,461	INFO	lbehrens	current_config.ini existiert nicht
+2019-12-11 22:01:50,948	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:01:51,253	ERROR	lbehrens	Validierung der Empfänger-Mailadressen 'ewfq' fehlgeschlagen. Fehler: {'ewfq': (550, b'5.1.1 <ewfq>: Recipient address rejected: User unknown in virtual alias table')}
+2019-12-11 22:02:06,093	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:02:06,552	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.com' erfolgreich
+2019-12-11 22:02:12,502	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:02:12,986	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.comxvds' erfolgreich
+2019-12-11 22:03:15,272	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-11 22:03:15,278	INFO	lbehrens	Programm beendet
+2019-12-11 22:03:19,009	INFO	lbehrens	Programm gestartet
+2019-12-11 22:03:19,595	INFO	lbehrens	current_config.ini existiert nicht
+2019-12-11 22:03:44,144	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:03:44,443	ERROR	lbehrens	Validierung der Empfänger-Mailadressen 'wefdwfvwev' fehlgeschlagen. Fehler: {'wefdwfvwev': (550, b'5.1.1 <wefdwfvwev>: Recipient address rejected: User unknown in virtual alias table')}
+2019-12-11 22:03:52,753	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:03:53,234	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.de' erfolgreich
+2019-12-11 22:03:55,609	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:03:56,082	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.desd' erfolgreich
+2019-12-11 22:03:57,264	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:03:57,739	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.desd' erfolgreich
+2019-12-11 22:04:12,547	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:04:12,847	ERROR	lbehrens	Validierung der Empfänger-Mailadressen 'bqiwujd' fehlgeschlagen. Fehler: {'bqiwujd': (550, b'5.1.1 <bqiwujd>: Recipient address rejected: User unknown in virtual alias table')}
+2019-12-11 22:04:37,094	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:04:37,556	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.comqdw' erfolgreich
+2019-12-11 22:04:50,192	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:04:50,660	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail' erfolgreich
+2019-12-11 22:04:55,520	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-11 22:04:55,818	ERROR	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa' fehlgeschlagen. Fehler: {'leifbehrens.vsa': (550, b'5.1.1 <leifbehrens.vsa>: Recipient address rejected: User unknown in virtual alias table')}
+2019-12-11 22:05:23,957	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-11 22:05:23,965	INFO	lbehrens	Programm beendet
