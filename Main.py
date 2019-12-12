@@ -1,6 +1,6 @@
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, QTimer
 from PyQt5.QtGui import QIcon, QTextCursor
 import sys
 from functions import *
@@ -18,6 +18,8 @@ from matplotlib import style
 from matplotlib.ticker import MaxNLocator
 import pickle
 import glob
+import uuid
+import re
 
 
 class Monitoring(QMainWindow):
@@ -25,10 +27,12 @@ class Monitoring(QMainWindow):
         super().__init__()
         self.title = "Monitoring"
         self.icon = "Icon.png"
-        self.top = 100
-        self.left = 100
-        self.width = 800
-        self.height = 550
+        
+        self.width = 1000
+        self.height = 600
+
+        self.lb_x_default = 200
+        self.lb_y_default = 25
 
         self.processes = {}     # {<name of monitoring>: <PID>}
         self.monitoring = []    # List with the names of monitorings for the current running monitorings (QListWigdet)
@@ -40,6 +44,12 @@ class Monitoring(QMainWindow):
         self.mail_access = False    # Bool for checking if the login credentials of the mailaccount are valid
 
         log("Logs/system.log", "info", "Programm gestartet")
+
+        self.timer_refresh_current_utilization = QTimer(self)
+        self.timer_refresh_current_utilization.timeout.connect(self.refresh_current_utilization)
+        self.timer_refresh_current_utilization.start(1000)
+        self.current_timer = 0
+        
         
         self.initWindow()   # initialize Main Window
         
@@ -167,7 +177,7 @@ class Monitoring(QMainWindow):
 
         # Tabwidget erstellt
         self.tabWidget = QTabWidget(self)
-        self.tabWidget.setGeometry(QRect(0, 0, 800, 550))
+        self.tabWidget.setGeometry(QRect(0, 0, self.width, self.height))
         
         # Tabs werden initialisiert
         self.initMonitoring()    
@@ -195,25 +205,25 @@ class Monitoring(QMainWindow):
         self.tabWidget.addTab(self.tab_monitoring, "Monitoring")
 
         self.lb_cpu_start_stop = QLabel(self.tab_monitoring)
-        self.lb_cpu_start_stop.setGeometry(QRect(15, 15, 150, 25))
+        self.lb_cpu_start_stop.setGeometry(QRect(15, 15, self.lb_x_default, self.lb_y_default))
         self.lb_cpu_start_stop.setText("CPU-Monitoring")
 
         self.btn_cpu_start_stop = QPushButton(self.tab_monitoring)
-        self.btn_cpu_start_stop.setGeometry(QRect(150, 15, 130, 25))
+        self.btn_cpu_start_stop.setGeometry(QRect(200, 15, 130, 25))
         self.btn_cpu_start_stop.setText("Start")
         
 
         self.lb_ram_start_stop = QLabel(self.tab_monitoring)
-        self.lb_ram_start_stop.setGeometry(QRect(15, 50, 150, 25))
+        self.lb_ram_start_stop.setGeometry(QRect(15, 50, self.lb_x_default, self.lb_y_default))
         self.lb_ram_start_stop.setText("Arbeitsspeicher-Monitoring")
 
         self.btn_ram_start_stop = QPushButton(self.tab_monitoring)
-        self.btn_ram_start_stop.setGeometry(QRect(150, 50, 130, 25))
+        self.btn_ram_start_stop.setGeometry(QRect(200, 50, 130, 25))
         self.btn_ram_start_stop.setText("Start")
         
 
         self.lb_disk_start_stop = QLabel(self.tab_monitoring)
-        self.lb_disk_start_stop.setGeometry(QRect(15, 85, 150, 25))
+        self.lb_disk_start_stop.setGeometry(QRect(15, 85, self.lb_x_default-50, self.lb_y_default))
         self.lb_disk_start_stop.setText("Festplatten-Monitoring")
 
         self.cb_disk_mon = QComboBox(self.tab_monitoring)
@@ -227,18 +237,18 @@ class Monitoring(QMainWindow):
         self.btn_disk_start_stop.setText("Start")
 
         self.lb_monitoring_description = QLabel(self.tab_monitoring)
-        self.lb_monitoring_description.setGeometry(QRect(15, 130, 200, 25))
+        self.lb_monitoring_description.setGeometry(QRect(15, 130, self.lb_x_default-50, self.lb_y_default))
         self.lb_monitoring_description.setText("Laufende Monitorings:")
 
         self.lw_processes = QListWidget(self.tab_monitoring)
         self.lw_processes.setGeometry(QRect(15, 155, 100, 200))
         
         self.lb_error = QLabel(self.tab_monitoring)
-        self.lb_error.setGeometry(QRect(15, self.height-50, self.width-50, 25))
+        self.lb_error.setGeometry(QRect(15, self.height-50, self.width-50, self.lb_y_default))
         self.lb_error.setStyleSheet("color: red")
 
         self.lb_status = QLabel(self.tab_monitoring)
-        self.lb_status.setGeometry(QRect(15, self.height-100, self.width-50, 25))
+        self.lb_status.setGeometry(QRect(15, self.height-100, self.width-50, self.lb_y_default))
         self.lb_status.setStyleSheet("color: green")
 
         # Connect buttons and combobox to methods
@@ -258,8 +268,8 @@ class Monitoring(QMainWindow):
         :param disk: current chosen disk in the combobox
         """
         # Initialisiere Errorlabel und Statuslabel
-        self.lb_error.setText("")
-        self.lb_status.setText("")
+        self.lb_error.clear()
+        self.lb_status.clear()
         
 
         # Only if the current_config is initialized you can start monitoring
@@ -510,14 +520,12 @@ class Monitoring(QMainWindow):
         self.os = self.pc_info["os"]
         self.drives = self.pc_info["drives"]
         self.memory = self.pc_info["memory"]
+        self.mac = ":".join(re.findall("..", "%x" % uuid.getnode()))
+
+
 
         self.tab_computerinformation = QWidget()
         self.tabWidget.addTab(self.tab_computerinformation, "Computerinformationen")
-
-        self.btn_refresh = QPushButton(self.tab_computerinformation)
-        self.btn_refresh.setGeometry(QRect(15, self.height-50, 20, 20))
-        self.btn_refresh.setIcon(QtGui.QIcon("refresh.jpg"))
-
 
         self.lb_user_description = QLabel(self.tab_computerinformation)
         self.lb_user_description.setGeometry(QRect(15, 15, 200, 25))
@@ -528,84 +536,76 @@ class Monitoring(QMainWindow):
         self.lb_user_value.setText(self.current_user)
 
 
-        self.lb_processes_description = QLabel(self.tab_computerinformation)
-        self.lb_processes_description.setGeometry(QRect(15, 40, 200, 25))
-        self.lb_processes_description.setText("Anzahl laufender Prozesse")
-
-        self.lb_processes_value = QLabel(self.tab_computerinformation)
-        self.lb_processes_value.setGeometry(QRect(200, 40, self.lb_x_value, 25))
-        self.lb_processes_value.setText(str(len(psutil.pids())))
-
-
         self.lb_hostname_description = QLabel(self.tab_computerinformation)
-        self.lb_hostname_description.setGeometry(QRect(15, 65, 200, 25))
+        self.lb_hostname_description.setGeometry(QRect(15, 40, 200, 25))
         self.lb_hostname_description.setText("Hostname")
 
         self.lb_hostname_value = QLabel(self.tab_computerinformation)
-        self.lb_hostname_value.setGeometry(QRect(200, 65, self.lb_x_value, 25))
+        self.lb_hostname_value.setGeometry(QRect(200, 40, self.lb_x_value, 25))
         self.lb_hostname_value.setText(self.hostname)
 
 
         self.lb_user_description = QLabel(self.tab_computerinformation)
-        self.lb_user_description.setGeometry(QRect(15, 90, 200, 25))
+        self.lb_user_description.setGeometry(QRect(15, 65, 200, 25))
         self.lb_user_description.setText("IP-Adresse")
 
         self.lb_user_value = QLabel(self.tab_computerinformation)
-        self.lb_user_value.setGeometry(QRect(200, 90, self.lb_x_value, 25))
+        self.lb_user_value.setGeometry(QRect(200, 65, self.lb_x_value, 25))
         self.lb_user_value.setText(self.ip)
 
 
         self.lb_count_physical_cores_description = QLabel(self.tab_computerinformation)
-        self.lb_count_physical_cores_description.setGeometry(QRect(15, 115, 200, 25))
+        self.lb_count_physical_cores_description.setGeometry(QRect(15, 90, 200, 25))
         self.lb_count_physical_cores_description.setText("Anzahl physischer Kerne")
 
         self.lb_count_physical_cores_value = QLabel(self.tab_computerinformation)
-        self.lb_count_physical_cores_value.setGeometry(QRect(200, 115, self.lb_x_value, 25))
+        self.lb_count_physical_cores_value.setGeometry(QRect(200, 90, self.lb_x_value, 25))
         self.lb_count_physical_cores_value.setText(str(self.cpu_p))
 
 
         self.lb_count_logical_cores_description = QLabel(self.tab_computerinformation)
-        self.lb_count_logical_cores_description.setGeometry(QRect(15, 140, 200, 25))
+        self.lb_count_logical_cores_description.setGeometry(QRect(15, 115, 200, 25))
         self.lb_count_logical_cores_description.setText("Anzahl logischer Kerne")
 
         self.lb_count_logical_cores_value = QLabel(self.tab_computerinformation)
-        self.lb_count_logical_cores_value.setGeometry(QRect(200, 140, self.lb_x_value, 25))
+        self.lb_count_logical_cores_value.setGeometry(QRect(200, 115, self.lb_x_value, 25))
         self.lb_count_logical_cores_value.setText(str(self.cpu_l))
         
 
         self.lb_processor_description = QLabel(self.tab_computerinformation)
-        self.lb_processor_description.setGeometry(QRect(15, 165, 200, 25))
+        self.lb_processor_description.setGeometry(QRect(15, 140, 200, 25))
         self.lb_processor_description.setText("Verbauter Prozessor")
 
         self.lb_processor_value = QLabel(self.tab_computerinformation)
-        self.lb_processor_value.setGeometry(QRect(200, 165, self.lb_x_value, 25))
+        self.lb_processor_value.setGeometry(QRect(200, 140, self.lb_x_value, 25))
         self.lb_processor_value.setText(self.processor)
 
 
         self.lb_os_description = QLabel(self.tab_computerinformation)
-        self.lb_os_description.setGeometry(QRect(15, 190, 200, 25))
+        self.lb_os_description.setGeometry(QRect(15, 165, 200, 25))
         self.lb_os_description.setText("Betriebssystem")
 
+
         self.lb_os_value = QLabel(self.tab_computerinformation)
-        self.lb_os_value.setGeometry(QRect(200, 190, self.lb_x_value, 25))
+        self.lb_os_value.setGeometry(QRect(200, 165, self.lb_x_value, 25))
         self.lb_os_value.setText(self.os)
 
 
         self.lb_drives_description = QLabel(self.tab_computerinformation)
-        self.lb_drives_description.setGeometry(QRect(15, 215, 200, 25))
+        self.lb_drives_description.setGeometry(QRect(15, 190, 200, 25))
         self.lb_drives_description.setText("Laufwerke")
 
         self.lb_drives_value = QLabel(self.tab_computerinformation)
-        self.lb_drives_value.setGeometry(QRect(200, 215, self.lb_x_value, 25))
+        self.lb_drives_value.setGeometry(QRect(200, 190, self.lb_x_value, 25))
         self.lb_drives_value.setText(", ".join(self.drives))
 
 
         self.lb_ram_description = QLabel(self.tab_computerinformation)
-        self.lb_ram_description.setGeometry(QRect(15, 240, 200, 25))
+        self.lb_ram_description.setGeometry(QRect(15, 215, 200, 25))
         self.lb_ram_description.setText("Verbauter Arbeitsspeicher")
 
         self.lb_ram_value = QLabel(self.tab_computerinformation)
-        self.lb_ram_value.setGeometry(QRect(200, 240, self.lb_x_value, 25))
+        self.lb_ram_value.setGeometry(QRect(200, 215, self.lb_x_value, 25))
         self.lb_ram_value.setText(str(self.memory) + " GiB")
 
 
@@ -617,50 +617,66 @@ class Monitoring(QMainWindow):
         self.btn_save_json.setGeometry(QRect(150, 450, 130, 25))
         self.btn_save_json.setText("JSON-Datei speichern")
 
-        #self.btn_refresh.clicked.connect()
-
     def initLogs(self):
         self.tab_logs = QWidget()
         self.tabWidget.addTab(self.tab_logs, "Logs")
+        self.tabWidget.currentChanged.connect(self.push_logs)
 
         self.tab_logs_all = QTabWidget(self.tab_logs)
-        self.tab_logs_all.setGeometry(QRect(0, 0, self.width, self.height-50))
+        self.tab_logs_all.setGeometry(QRect(0, 0, self.width, self.height))
         
-        self.tab_logs_threshold_limits = QWidget(self.tab_logs_all)
-        self.tab_logs_all.addTab(self.tab_logs_threshold_limits, "Schwelle überschritten")
-        
-
-        self.tb_logs_threshold_limits = QTextBrowser(self.tab_logs_threshold_limits)
-        self.tb_logs_threshold_limits.setGeometry(QRect(15, 15, self.width-40, 450))
-        self.tb_logs_threshold_limits.setStyleSheet("font-size: 8pt")
-
-
         self.tab_logs_system_logs = QWidget()
-        self.tab_logs_all.addTab(self.tab_logs_system_logs, "Systemlogs")
+        self.tab_logs_all.addTab(self.tab_logs_system_logs, "System-Logs")
 
         self.tb_logs_system_logs = QTextBrowser(self.tab_logs_system_logs)
-        self.tb_logs_system_logs.setGeometry(QRect(15, 15, self.width-40, 450))
-        self.tb_logs_system_logs.setStyleSheet("font-size: 8pt")
+        self.tb_logs_system_logs.setGeometry(QRect(15, 15, self.width-40, self.height-80))
+        self.tb_logs_system_logs.moveCursor(QtGui.QTextCursor.End)
 
 
-        self.btn_refresh_logs = QPushButton(self.tab_logs)
-        self.btn_refresh_logs.setGeometry(QRect(15, self.height-50, 50, 25))
-        self.btn_refresh_logs.setIcon(QtGui.QIcon("refresh.jpg"))
+        self.tab_logs_monitoring_logs = QWidget()
+        self.tab_logs_all.addTab(self.tab_logs_monitoring_logs, "Monitoring-Logs")
 
-        self.btn_refresh_logs.clicked.connect(self.push_logs)
+        self.tb_logs_monitoring_logs = QTextBrowser(self.tab_logs_monitoring_logs)
+        self.tb_logs_monitoring_logs.setGeometry(QRect(15, 15, self.width-40, self.height-80))
+        self.tb_logs_monitoring_logs.moveCursor(QtGui.QTextCursor.End)
+
+        
+        self.tab_logs_threshold_limits = QWidget(self.tab_logs_all)
+        self.tab_logs_all.addTab(self.tab_logs_threshold_limits, "Schwelle überschritten-Logs")
+        
+        self.tb_logs_threshold_limits = QTextBrowser(self.tab_logs_threshold_limits)
+        self.tb_logs_threshold_limits.setGeometry(QRect(15, 15, self.width-40, self.height-80))
+        self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
+        
+        self.tab_logs_all.currentChanged.connect(self.push_logs)
 
     def push_logs(self):
         if self.current_config is not None:
             try:
-                logs_path = self.current_config["logs_path"] + "/limits.log"
+                logs_path = f"{self.current_config['logs_path']}/limits.log"
                 if os.path.isfile(logs_path):
                     with open(logs_path) as f:
                         logs = f.read()
-                    self.tb_logs_threshold_limits.setText(logs)
-                    self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
+                        self.tb_logs_threshold_limits.setText(logs)
+                        self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
+                                        
+                logs_path = "Logs/system.log"
+                if os.path.isfile(logs_path):
+                    with open(logs_path) as f:
+                        logs = f.read()
+                        self.tb_logs_system_logs.setText(logs)
+                        self.tb_logs_system_logs.moveCursor(QtGui.QTextCursor.End)
+                
+                logs_path = "Logs/monitoring.log"
+                if os.path.isfile(logs_path):
+                    with open(logs_path) as f:
+                        logs = f.read()
+                        self.tb_logs_monitoring_logs.setText(logs)
+                        self.tb_logs_monitoring_logs.moveCursor(QtGui.QTextCursor.End)
+
             except:
                 pass
-
+    
     def initConfig(self):
         self.tab_config = QWidget()
         self.tabWidget.addTab(self.tab_config, "Konfigurieren")
@@ -930,26 +946,26 @@ class Monitoring(QMainWindow):
 
         except Exception as e:
             log("Logs/system.log", "info", f"startup_config.ini konnte nicht erstellt werden. Fehler: {e}")
-
-        
-    
+ 
     def check_config(self):
         """
         onclick on the one of the save configuration buttons
         It checks if all the necessary inputs are correct
         """
         self.current_config = None
-        log("Logs/system.log", "info", "Starte Überprüfung Konfigurationsdateien")
         self.lb_config_warnings.clear()
         self.lb_config_warnings.setStyleSheet("color: red")
         self.lb_validate_login.clear()
+        log("Logs/system.log", "info", "Starte Überprüfung Konfigurationsdateien")
 
         if self.processes:
             self.lb_config_warnings.setText("Beende zunächst alle Monitorings.")
+            log("Logs/system.log", "error", "current_config.ini konnte nicht geschrieben werden - monitorings müssen beendet sein")
             return
 
         if not self.mail_access:
             self.lb_config_warnings.setText("Validiere zunächst den Mailzugang.")
+            log("Logs/system.log", "info", "current_config.ini konnte nicht geschrieben werden - Mailzugang muss zunächst validiert werden")
             return
 
         must_have_inputs = []
@@ -971,12 +987,14 @@ class Monitoring(QMainWindow):
 
         
         # must_have configs
-        if self.le_logs_destination_value.text():
+        if os.path.isdir(self.le_logs_destination_value.text()):
             config["logs_path"] = self.le_logs_destination_value.text()
+            log("Logs/system.log", "info", f"Ausgewählter Pfad '{self.le_logs_destination_value.text()}' ist gültig")            
         else:
             must_have_inputs.append(False)
             warn_msg_lb += " Ungültiger Pfad zum Speichern der Logs* |"
-        
+            log("Logs/system.log", "info", f"Ausgewählter Pfad '{self.le_logs_destination_value.text()}' ist ungültig")
+
         if self.le_mail_receiver.text():
             # Check if the addresses are reachable
 
@@ -998,6 +1016,7 @@ class Monitoring(QMainWindow):
         else:
             must_have_inputs.append(False)
             warn_msg_lb += " Keine Mailadresse angegeben* |"
+            log("Logs/system.log", "info", "Keine Mailadressen angegeben")
         
         if self.cb_attachment_sent.currentText() == "Nein":
             config["attachment"] = False
@@ -1058,8 +1077,10 @@ class Monitoring(QMainWindow):
             self.lb_config_warnings.setText(warn_msg_lb)
 
         if all(must_have_inputs):
+            log("Logs/system.log", "info", "Beende Überprüfung Konfigurationsdateien. Alle essentiellen Eingaben sind gültig.")
             return config
         else:
+            log("Logs/system.log", "info", "Beende Überprüfung Konfigurationsdateien. Mind. eine ungültige essentielle Eingabe")
             return None
 
     def cb_drives_limits_refresh(self):
@@ -1100,6 +1121,7 @@ class Monitoring(QMainWindow):
             if not self.le_mail_sender.text() or not self.le_mail_password.text() or not self.le_mail_server.text() or not self.le_mail_server_port.text():
                 self.lb_validate_login.setStyleSheet("color: red")
                 self.lb_validate_login.setText("Es müssen alle Felder ausgefüllt werden")
+                log("Logs/system.log", "info", "Mailkonto-Validierung - nicht alle Felder sind ausgefüllt")
                 return
 
             # Try to login. If it works the credentials are correct and the line edits getting disabled 
@@ -1116,16 +1138,21 @@ class Monitoring(QMainWindow):
             self.mail_access = True
             self.lb_validate_login.setStyleSheet("color: green")
             self.lb_validate_login.setText("Validierung erfolgreich")
+            log("Logs/system.log", "info", f"Mailkonto-Validierung mit Konto '{self.le_mail_sender.text()}' erfolgreich")
 
         except ValueError:
             self.lb_validate_login.setStyleSheet("color: red")
             self.lb_validate_login.setText("Port muss eine Zahl sein")
+            log("Logs/system.log", "info", f"Mailkonto-Validierung - Port '{self.le_mail_server_port.text()}' ist keine Zahl")
         except smtplib.SMTPAuthenticationError:
             self.lb_validate_login.setStyleSheet("color: red")
             self.lb_validate_login.setText("Logindaten nicht korrekt")
+            log("Logs/system.log", "info", f"Mailkonto-Validierung - Credentials sind nicht korrekt")
         except Exception as e:
             self.lb_validate_login.setStyleSheet("color: red")
             self.lb_validate_login.setText(f"Folgender Fehler: {e}")
+            log("Logs/system.log", "info", f"Mailkonto-Validierung - Folgender Fehler ist aufgetreten: {e} ")
+
             
     def initCurrentUtilization(self):
         self.tab_current_utilization = QWidget()
@@ -1134,37 +1161,27 @@ class Monitoring(QMainWindow):
         self.lb_cpu_utilization_description = QLabel(self.tab_current_utilization)
         self.lb_cpu_utilization_description.setGeometry(QRect(15, 15, 200, 25))
         self.lb_cpu_utilization_description.setText("CPU-Auslastung")
+        
+        self.lb_cpu_utilization_value = QLabel(self.tab_current_utilization)
+        self.lb_cpu_utilization_value.setGeometry(QRect(200, 15, 400, 25))
 
 
         self.lb_ram_utilization_description = QLabel(self.tab_current_utilization)
         self.lb_ram_utilization_description.setGeometry(QRect(15, 50, 200, 25))
         self.lb_ram_utilization_description.setText("Arbeitsspeicher-Auslastung")
-
-        y = 85
-        for drive in self.drives:
-            self.lb_drive_utilization_description = QLabel(self.tab_current_utilization)
-            self.lb_drive_utilization_description.setGeometry(QRect(15, y, 200, 25))
-            self.lb_drive_utilization_description.setText(f"Laufwerk {drive}")
-            
-            y += 35
-
-
-
-        """
-            self.lb_cpu_utilization_value = QLabel(self.tab_current_utilization)
-            self.lb_cpu_utilization_value.setGeometry(QRect(200, 15, 400, 25))
-            self.lb_ram_utilization_value = QLabel(self.tab_current_utilization)
-            self.lb_ram_utilization_value.setGeometry(QRect(200, 50, 400, 25))
-
-            y = 85 
-
-            for drive in self.drives:
-                self.lb_drive_utilization_value = QLabel(self.tab_current_utilization)
-                self.lb_drive_utilization_value.setGeometry(QRect(200, y, 400, 25))
-
-                y += 35
-        """
-
+        
+        self.lb_ram_utilization_value = QLabel(self.tab_current_utilization)
+        self.lb_ram_utilization_value.setGeometry(QRect(200, 50, 400, 25))
+        
+        
+        self.lb_number_processes_description = QLabel(self.tab_current_utilization)
+        self.lb_number_processes_description.setGeometry(QRect(15, 85, 200, 25))
+        self.lb_number_processes_description.setText("Anzahl laufender Prozesse")
+        
+        self.lb_number_processes_value = QLabel(self.tab_current_utilization)
+        self.lb_number_processes_value.setGeometry(QRect(200, 85, 400, 25))
+        
+        
     def initGraph(self):
         self.tab_graph = QWidget()
         self.tabWidget.addTab(self.tab_graph, "Graph")
@@ -1186,6 +1203,20 @@ class Monitoring(QMainWindow):
             self.tab_current_drive = QWidget()
             self.tab_graph_mon.addTab(self.tab_current_drive, f"Laufwerk {drive}")
             PlotCanvas(self.tab_current_drive, width=6, height=4, pickle_file=f"mon_{drive.replace(':', '')}.pickle").move(50, 50)
+
+    def refresh_current_utilization(self):
+        self.lb_cpu_utilization_value.setText(str(psutil.cpu_percent()) + " %")
+        self.lb_ram_utilization_value.setText(str(round(get_virtual_memory()["percent"], 2)) + " %")
+        self.lb_number_processes_value.setText(str(len(psutil.pids())))       
+
+
+        if self.current_timer % 10 == 0:
+            self.lb_error.clear()
+            self.lb_status.clear()
+            self.lb_validate_login.clear()
+            self.lb_config_warnings.clear()
+                
+        self.current_timer += 1
 
 
 class PlotCanvas(FigureCanvas):
@@ -1215,8 +1246,6 @@ class PlotCanvas(FigureCanvas):
 
     def animate(self, i):
         if os.path.isfile(self.file):
-            #if self.start_time == 0:
-                #self.start_time = time.time()
             try:
                 with open(self.file, "rb") as p:
                     xs, ys = pickle.load(p)
@@ -1233,12 +1262,13 @@ class PlotCanvas(FigureCanvas):
                 self.axis.get_xaxis().set_visible(False)
 
                 self.axis.set_ylabel("Auslastung in %")
-                self.axis.plot(xs, ys, label=f"Auslastung")# nach {round(time.time()-self.start_time)} s")
+                self.axis.plot(xs, ys, label=f"Auslastung")
                 self.axis.plot(xs, y_mean, label="Average Auslastung", linestyle="--")
 
                 self.axis.legend(loc='upper left')
-            except:
-                pass
+            except Exception as e:
+                log("Logs/monitoring.log", "info", f"Graph-Animation nicht möglich. Fehler: {e}")
+
         else:
             self.axis.clear()
 
