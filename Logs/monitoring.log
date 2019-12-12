@@ -15,3 +15,21 @@
 2019-12-11 21:56:47,907	INFO	lbehrens	CPU-Monitoring konnte nicht gestartet werden - keine Konifguration vorhanden
 2019-12-11 21:57:01,453	INFO	lbehrens	CPU-Monitoring konnte nicht gestartet werden - keine Konifguration vorhanden
 2019-12-11 21:57:02,276	INFO	lbehrens	CPU-Monitoring konnte nicht gestartet werden - keine Konifguration vorhanden
+2019-12-12 18:11:27,423	INFO	lbehrens	CPU-Monitoring wurde gestartet. Prozess-ID: 19848
+2019-12-12 18:11:28,756	INFO	lbehrens	CPU-Monitoring wurde beendet. Prozess-ID: 19848
+2019-12-12 18:17:55,449	INFO	lbehrens	Laufwerk B:-Monitoring wurde gestartet. Prozess-ID: 2988
+2019-12-12 18:44:50,374	INFO	lbehrens	Laufwerk B:-Monitoring wurde gestartet. Prozess-ID: 24564
+2019-12-12 18:44:54,534	INFO	lbehrens	Laufwerk B:-Monitoring wurde beendet. Prozess-ID: 24564
+2019-12-12 19:06:24,442	INFO	lbehrens	CPU-Monitoring wurde gestartet. Prozess-ID: 17796
+2019-12-12 19:06:25,184	INFO	lbehrens	RAM-Monitoring wurde gestartet. Prozess-ID: 23960
+2019-12-12 19:06:34,090	INFO	lbehrens	CPU-Monitoring wurde beendet. Prozess-ID: 17796
+2019-12-12 19:06:34,446	INFO	lbehrens	RAM-Monitoring wurde beendet. Prozess-ID: 23960
+2019-12-12 19:07:11,159	INFO	lbehrens	RAM-Monitoring wurde gestartet. Prozess-ID: 4132
+2019-12-12 19:07:22,504	INFO	lbehrens	RAM-Monitoring wurde beendet. Prozess-ID: 4132
+2019-12-12 19:10:52,768	INFO	lbehrens	Laufwerk B:-Monitoring wurde gestartet. Prozess-ID: 400
+2019-12-12 19:47:10,452	INFO	lbehrens	CPU-Monitoring wurde gestartet. Prozess-ID: 21628
+2019-12-12 19:47:35,021	INFO	lbehrens	CPU-Monitoring wurde gestartet. Prozess-ID: 18740
+2019-12-12 19:47:49,572	INFO	lbehrens	CPU-Monitoring wurde beendet. Prozess-ID: 18740
+2019-12-12 19:48:14,135	INFO	lbehrens	CPU-Monitoring wurde gestartet. Prozess-ID: 12404
+2019-12-12 19:48:21,416	INFO	lbehrens	CPU-Monitoring wurde beendet. Prozess-ID: 12404
+2019-12-12 19:49:52,492	INFO	lbehrens	Laufwerk B:-Monitoring wurde gestartet. Prozess-ID: 23584

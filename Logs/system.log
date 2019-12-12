@@ -100,3 +100,202 @@
 2019-12-11 22:04:55,818	ERROR	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa' fehlgeschlagen. Fehler: {'leifbehrens.vsa': (550, b'5.1.1 <leifbehrens.vsa>: Recipient address rejected: User unknown in virtual alias table')}
 2019-12-11 22:05:23,957	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
 2019-12-11 22:05:23,965	INFO	lbehrens	Programm beendet
+2019-12-12 18:03:30,550	INFO	lbehrens	Programm gestartet
+2019-12-12 18:05:14,415	INFO	lbehrens	Programm gestartet
+2019-12-12 18:05:23,832	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:05:23,840	INFO	lbehrens	Programm beendet
+2019-12-12 18:05:35,645	INFO	lbehrens	Programm gestartet
+2019-12-12 18:05:41,793	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:05:41,799	INFO	lbehrens	Programm beendet
+2019-12-12 18:07:12,418	INFO	lbehrens	Programm gestartet
+2019-12-12 18:08:33,612	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:08:33,618	INFO	lbehrens	Programm beendet
+2019-12-12 18:08:37,198	INFO	lbehrens	Programm gestartet
+2019-12-12 18:08:43,732	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:08:43,739	INFO	lbehrens	Programm beendet
+2019-12-12 18:09:29,963	INFO	lbehrens	Programm gestartet
+2019-12-12 18:09:35,234	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:09:35,242	INFO	lbehrens	Programm beendet
+2019-12-12 18:09:58,587	INFO	lbehrens	Programm gestartet
+2019-12-12 18:10:02,237	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:10:02,244	INFO	lbehrens	Programm beendet
+2019-12-12 18:10:11,177	INFO	lbehrens	Programm gestartet
+2019-12-12 18:10:13,950	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:10:13,957	INFO	lbehrens	Programm beendet
+2019-12-12 18:10:20,628	INFO	lbehrens	Programm gestartet
+2019-12-12 18:10:26,200	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:10:26,206	INFO	lbehrens	Programm beendet
+2019-12-12 18:11:00,699	INFO	lbehrens	Programm gestartet
+2019-12-12 18:11:03,852	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:11:03,858	INFO	lbehrens	Programm beendet
+2019-12-12 18:11:16,936	INFO	lbehrens	Programm gestartet
+2019-12-12 18:11:28,759	ERROR	lbehrens	mon_cpu.pickle-Datei konnte nicht gelöscht werden. Fehler: [WinError 2] Das System kann die angegebene Datei nicht finden: 'mon_cpu.pickle'
+2019-12-12 18:11:44,848	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:11:44,854	INFO	lbehrens	Programm beendet
+2019-12-12 18:12:11,865	INFO	lbehrens	Programm gestartet
+2019-12-12 18:12:17,235	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:12:17,242	INFO	lbehrens	Programm beendet
+2019-12-12 18:12:36,603	INFO	lbehrens	Programm gestartet
+2019-12-12 18:12:43,438	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:12:43,445	INFO	lbehrens	Programm beendet
+2019-12-12 18:13:04,150	INFO	lbehrens	Programm gestartet
+2019-12-12 18:13:08,392	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:13:08,400	INFO	lbehrens	Programm beendet
+2019-12-12 18:13:24,647	INFO	lbehrens	Programm gestartet
+2019-12-12 18:13:41,396	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:13:41,403	INFO	lbehrens	Programm beendet
+2019-12-12 18:13:51,587	INFO	lbehrens	Programm gestartet
+2019-12-12 18:13:54,646	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:13:54,653	INFO	lbehrens	Programm beendet
+2019-12-12 18:13:59,297	INFO	lbehrens	Programm gestartet
+2019-12-12 18:14:28,922	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:14:28,929	INFO	lbehrens	Programm beendet
+2019-12-12 18:14:31,888	INFO	lbehrens	Programm gestartet
+2019-12-12 18:15:00,422	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:15:00,429	INFO	lbehrens	Programm beendet
+2019-12-12 18:16:34,315	INFO	lbehrens	Programm gestartet
+2019-12-12 18:16:38,751	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:16:38,758	INFO	lbehrens	Programm beendet
+2019-12-12 18:17:48,339	INFO	lbehrens	Programm gestartet
+2019-12-12 18:17:53,181	ERROR	lbehrens	Starten Laufwerk C:-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-12 18:18:01,400	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:18:01,409	INFO	lbehrens	B:-Monitoring wurde beendet. Prozess-ID: 2988
+2019-12-12 18:18:01,425	INFO	lbehrens	mon_B.pickle-Datei wurde gelöscht
+2019-12-12 18:18:01,441	INFO	lbehrens	Programm beendet
+2019-12-12 18:33:58,689	INFO	lbehrens	Programm gestartet
+2019-12-12 18:42:08,627	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-12 18:42:09,253	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.com' erfolgreich
+2019-12-12 18:42:09,263	INFO	lbehrens	running_config.ini wurde geschrieben
+2019-12-12 18:42:09,275	INFO	lbehrens	running_config.ini-Datei erfolgreich geparsed
+2019-12-12 18:42:09,979	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-12 18:42:10,455	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'leifbehrens.vsa@gmail.com' erfolgreich
+2019-12-12 18:42:10,465	INFO	lbehrens	running_config.ini wurde geschrieben
+2019-12-12 18:42:10,477	INFO	lbehrens	running_config.ini-Datei erfolgreich geparsed
+2019-12-12 18:42:10,493	INFO	lbehrens	startup_config.ini erfolgreich erstellt
+2019-12-12 18:44:17,859	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:44:17,863	INFO	lbehrens	Programm beendet
+2019-12-12 18:44:21,194	INFO	lbehrens	Programm gestartet
+2019-12-12 18:44:54,539	INFO	lbehrens	mon_B.pickle-Datei wurde gelöscht
+2019-12-12 18:45:00,609	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:45:00,618	INFO	lbehrens	Programm beendet
+2019-12-12 18:45:05,722	INFO	lbehrens	Programm gestartet
+2019-12-12 18:59:04,356	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:59:04,363	INFO	lbehrens	Programm beendet
+2019-12-12 18:59:07,287	INFO	lbehrens	Programm gestartet
+2019-12-12 18:59:15,829	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:59:15,835	INFO	lbehrens	Programm beendet
+2019-12-12 18:59:30,497	INFO	lbehrens	Programm gestartet
+2019-12-12 18:59:34,942	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:59:34,950	INFO	lbehrens	Programm beendet
+2019-12-12 18:59:44,830	INFO	lbehrens	Programm gestartet
+2019-12-12 18:59:49,143	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 18:59:49,151	INFO	lbehrens	Programm beendet
+2019-12-12 19:00:19,694	INFO	lbehrens	Programm gestartet
+2019-12-12 19:00:25,387	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:00:25,394	INFO	lbehrens	Programm beendet
+2019-12-12 19:00:42,383	INFO	lbehrens	Programm gestartet
+2019-12-12 19:00:55,679	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:00:55,686	INFO	lbehrens	Programm beendet
+2019-12-12 19:00:58,583	INFO	lbehrens	Programm gestartet
+2019-12-12 19:01:04,920	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:01:04,927	INFO	lbehrens	Programm beendet
+2019-12-12 19:01:18,271	INFO	lbehrens	Programm gestartet
+2019-12-12 19:01:23,714	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:01:23,721	INFO	lbehrens	Programm beendet
+2019-12-12 19:05:45,667	INFO	lbehrens	Programm gestartet
+2019-12-12 19:05:54,487	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:05:54,493	INFO	lbehrens	Programm beendet
+2019-12-12 19:06:13,464	INFO	lbehrens	Programm gestartet
+2019-12-12 19:06:34,094	INFO	lbehrens	mon_cpu.pickle-Datei wurde gelöscht
+2019-12-12 19:06:34,454	INFO	lbehrens	mon_ram.pickle-Datei wurde gelöscht
+2019-12-12 19:07:22,510	INFO	lbehrens	mon_ram.pickle-Datei wurde gelöscht
+2019-12-12 19:07:51,996	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:07:52,003	INFO	lbehrens	Programm beendet
+2019-12-12 19:08:16,200	INFO	lbehrens	Programm gestartet
+2019-12-12 19:08:21,599	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:08:21,606	INFO	lbehrens	Programm beendet
+2019-12-12 19:08:58,755	INFO	lbehrens	Programm gestartet
+2019-12-12 19:09:06,020	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:09:06,027	INFO	lbehrens	Programm beendet
+2019-12-12 19:10:05,045	INFO	lbehrens	Programm gestartet
+2019-12-12 19:10:12,787	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:10:12,794	INFO	lbehrens	Programm beendet
+2019-12-12 19:10:38,447	INFO	lbehrens	Programm gestartet
+2019-12-12 19:10:44,214	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:10:44,220	INFO	lbehrens	Programm beendet
+2019-12-12 19:10:50,899	INFO	lbehrens	Programm gestartet
+2019-12-12 19:11:17,986	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:11:17,994	INFO	lbehrens	B:-Monitoring wurde beendet. Prozess-ID: 400
+2019-12-12 19:11:18,011	INFO	lbehrens	mon_B.pickle-Datei wurde gelöscht
+2019-12-12 19:11:18,028	INFO	lbehrens	Programm beendet
+2019-12-12 19:12:36,908	INFO	lbehrens	Programm gestartet
+2019-12-12 19:12:48,659	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:12:48,666	INFO	lbehrens	Programm beendet
+2019-12-12 19:13:25,623	INFO	lbehrens	Programm gestartet
+2019-12-12 19:13:35,129	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:13:35,136	INFO	lbehrens	Programm beendet
+2019-12-12 19:13:52,362	INFO	lbehrens	Programm gestartet
+2019-12-12 19:15:21,452	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:15:21,461	INFO	lbehrens	Programm beendet
+2019-12-12 19:21:16,862	INFO	lbehrens	Programm gestartet
+2019-12-12 19:21:29,332	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:21:29,339	INFO	lbehrens	Programm beendet
+2019-12-12 19:21:35,876	INFO	lbehrens	Programm gestartet
+2019-12-12 19:21:40,926	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:21:40,932	INFO	lbehrens	Programm beendet
+2019-12-12 19:22:43,575	INFO	lbehrens	Programm gestartet
+2019-12-12 19:23:46,538	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:23:46,545	INFO	lbehrens	Programm beendet
+2019-12-12 19:23:56,736	INFO	lbehrens	Programm gestartet
+2019-12-12 19:24:06,125	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:24:06,131	INFO	lbehrens	Programm beendet
+2019-12-12 19:24:41,054	INFO	lbehrens	Programm gestartet
+2019-12-12 19:24:54,642	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:24:54,649	INFO	lbehrens	Programm beendet
+2019-12-12 19:25:59,056	INFO	lbehrens	Programm gestartet
+2019-12-12 19:26:04,882	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:26:04,889	INFO	lbehrens	Programm beendet
+2019-12-12 19:26:20,266	INFO	lbehrens	Programm gestartet
+2019-12-12 19:26:35,197	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:26:35,204	INFO	lbehrens	Programm beendet
+2019-12-12 19:26:52,122	INFO	lbehrens	Programm gestartet
+2019-12-12 19:28:03,662	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:28:03,669	INFO	lbehrens	Programm beendet
+2019-12-12 19:29:32,910	INFO	lbehrens	Programm gestartet
+2019-12-12 19:29:42,529	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:29:42,536	INFO	lbehrens	Programm beendet
+2019-12-12 19:30:41,671	INFO	lbehrens	Programm gestartet
+2019-12-12 19:30:57,906	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:30:57,914	INFO	lbehrens	Programm beendet
+2019-12-12 19:31:30,925	INFO	lbehrens	Programm gestartet
+2019-12-12 19:35:47,489	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:35:47,496	INFO	lbehrens	Programm beendet
+2019-12-12 19:35:49,325	INFO	lbehrens	Programm gestartet
+2019-12-12 19:36:08,077	INFO	lbehrens	Programm gestartet
+2019-12-12 19:44:28,470	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:44:28,477	INFO	lbehrens	Programm beendet
+2019-12-12 19:44:31,744	INFO	lbehrens	Programm gestartet
+2019-12-12 19:45:00,822	INFO	lbehrens	Programm gestartet
+2019-12-12 19:45:16,185	INFO	lbehrens	Programm gestartet
+2019-12-12 19:46:01,694	INFO	lbehrens	Programm gestartet
+2019-12-12 19:46:56,993	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:46:57,000	INFO	lbehrens	Programm beendet
+2019-12-12 19:47:01,370	INFO	lbehrens	Programm gestartet
+2019-12-12 19:47:22,148	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:47:22,154	INFO	lbehrens	cpu-Monitoring wurde beendet. Prozess-ID: 21628
+2019-12-12 19:47:22,174	INFO	lbehrens	mon_cpu.pickle-Datei wurde gelöscht
+2019-12-12 19:47:22,187	INFO	lbehrens	Programm beendet
+2019-12-12 19:47:25,156	INFO	lbehrens	Programm gestartet
+2019-12-12 19:47:49,576	INFO	lbehrens	mon_cpu.pickle-Datei wurde gelöscht
+2019-12-12 19:48:21,420	INFO	lbehrens	mon_cpu.pickle-Datei wurde gelöscht
+2019-12-12 19:49:04,542	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:49:04,550	INFO	lbehrens	Programm beendet
+2019-12-12 19:49:08,656	INFO	lbehrens	Programm gestartet
+2019-12-12 19:49:43,796	INFO	lbehrens	Programm gestartet
+2019-12-12 19:49:58,045	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:49:58,052	INFO	lbehrens	B:-Monitoring wurde beendet. Prozess-ID: 23584
+2019-12-12 19:49:58,071	INFO	lbehrens	mon_B.pickle-Datei wurde gelöscht
+2019-12-12 19:49:58,086	INFO	lbehrens	Programm beendet
+2019-12-12 19:50:16,912	INFO	lbehrens	Programm gestartet
+2019-12-12 19:50:29,101	INFO	lbehrens	running_config.ini-Datei wurde gelöscht
+2019-12-12 19:50:29,109	INFO	lbehrens	Programm beendet
