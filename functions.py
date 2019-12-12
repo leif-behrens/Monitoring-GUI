@@ -254,7 +254,7 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
             if soft <= disk_usage["percent"] < hard:
 
                 logtype = "warning"
-                log_msg = f"| {name} >= {soft} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
+                log_msg = f"{name} >= {soft} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
                 
                 log(f, logtype, log_msg)
 
@@ -283,7 +283,7 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
             elif disk_usage["percent"] >= hard:
 
                 logtype = "critical"
-                log_msg = f"| {name} >= {hard} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
+                log_msg = f"{name} >= {hard} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
 
                 log(f, logtype, log_msg)
                 
@@ -291,9 +291,10 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
 
                 try:
                     sendmail(mail_addresses, user, mail_msg, name, user, password, server, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+                    log("Logs/system.log", "info", f"Festplattennutzung {disk.replace} - Mail wurde an {mail_addresses} versandt")
                 
                 except Exception as e:
-                    log(f"{logs_destination}/mail.log", "error", f"Festplattennutzung {disk.replace(':', '')}: Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
+                    log("Logs/system.log", "error", f"Festplattennutzung {disk.replace} - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
                 
                 start = time.time()
                 
@@ -321,7 +322,7 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
     except Exception as e:
         if os.path.isfile(f"mon_{disk.replace(':', '')}.pickle"):
             os.remove(f"mon_{disk.replace(':', '')}.pickle")
-        log(f"{logs_destination}/system.log", "error", f"Laufwerk {disk.replace(':', '')}-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
+        log("Logs/system.log", "error", f"Laufwerk {disk.replace(':', '')}-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
         
 
 def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
@@ -352,7 +353,7 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
             if soft <= cpu < hard:
 
                 logtype = "warning"
-                log_msg = f"| CPU-Auslastung >= {soft} % | Aktuelle Auslastung: {cpu} %"
+                log_msg = f"CPU-Auslastung >= {soft} % | Aktuelle Auslastung: {cpu} %"
 
                 log(f, logtype, log_msg)
 
@@ -380,7 +381,7 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
             elif cpu >= hard:
 
                 logtype = "critical"
-                log_msg = f"| CPU-Auslastung >= {hard} % | Aktuelle Auslastung: {cpu} %"
+                log_msg = f"CPU-Auslastung >= {hard} % | Aktuelle Auslastung: {cpu} %"
 
                 log(f, logtype, log_msg)
 
@@ -388,9 +389,10 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
 
                 try:
                     sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+                    log("Logs/system.log", "info", f"CPU - Mail wurde an {mail_addresses} versandt")
 
                 except Exception as e:
-                    log(f"{logs_destination}/mail.log", "error", f"CPU - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")   
+                    log("Logs/system.log", "error", f"CPU - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")   
                 
                 start = time.time()
                 
@@ -419,7 +421,7 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
     except Exception as e:
         if os.path.isfile("mon_cpu.pickle"):
             os.remove("mon_cpu.pickle")
-        log(f"{logs_destination}/system.log", "error", f"CPU-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
+        log("Logs/system.log", "error", f"CPU-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
 
 
 def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
@@ -449,7 +451,7 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
             if soft <= virtual_memory["percent"] < hard:
 
                 logtype = "warning"
-                log_msg = f"| {name} >= {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
+                log_msg = f"{name} >= {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
                 log(name, f, logtype, log_msg)
 
@@ -477,7 +479,7 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
             elif virtual_memory["percent"] >= hard:
 
                 logtype = "critical"
-                log_msg = f"| {name} >= {hard} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
+                log_msg = f"{name} >= {hard} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
                 log(f, logtype, log_msg)
 
@@ -485,9 +487,10 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
 
                 try:
                     sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+                    log("Logs/system.log", "info", f"Arbeitsspeicher - Mail wurde an {mail_addresses} versandt")
 
                 except Exception as e:
-                    log(f"{logs_destination}/mail.log", "error", f"Arbeitsspeicher - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
+                    log("Logs/system.log", "error", f"Arbeitsspeicher - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
                    
                 start = time.time()
                 
@@ -515,7 +518,7 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
     except Exception as e:
         if os.path.isfile("mon_ram.pickle"):
             os.remove("mon_ram.pickle")
-        log(f"{logs_destination}/system.log", "error", f"Arbeitsspeicher-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
+        log("Logs/system.log", "error", f"Arbeitsspeicher-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
 
 
 def show_hardware_information():
