@@ -34,6 +34,8 @@ class Monitoring(QMainWindow):
         self.lb_x_default = 200
         self.lb_y_default = 25
 
+        self.start_system_time = time.time()
+
         self.processes = {}     # {<name of monitoring>: <PID>}
         self.monitoring = []    # List with the names of monitorings for the current running monitorings (QListWigdet)
         self.drives = get_pc_information()["drives"]    # List with all drives
@@ -153,9 +155,9 @@ class Monitoring(QMainWindow):
             for mon, pid in self.processes.items():
                 try:
                     psutil.Process(pid).terminate()
-                    log("Logs/system.log", "info", f"{mon}-Monitoring wurde beendet. Prozess-ID: {pid}")
+                    log("Logs/monitoring.log", "info", f"{mon}-Monitoring wurde beendet. Prozess-ID: {pid}")
                 except:
-                    log("Logs/system.log", "info", f"{mon}-Monitoring mit der Prozess-ID {pid} war bereits beendet")
+                    log("Logs/monitoring.log", "error", f"{mon}-Monitoring mit der Prozess-ID {pid} war bereits beendet")
             
             # Delete all pickle-Files
             for f in glob.glob("*.pickle"):
@@ -166,7 +168,7 @@ class Monitoring(QMainWindow):
             log("Logs/system.log", "debug", f"Programm beenden - Folgender Fehler ist aufgetreten: {e}")
         
         else:
-            log("Logs/system.log", "info", "Programm beendet")
+            log("Logs/system.log", "info", f"Programm nach {round(time.time()-self.start_system_time, 2)} Sekunden beendet")
             
 
     def initWindow(self):
@@ -1158,28 +1160,42 @@ class Monitoring(QMainWindow):
         self.tab_current_utilization = QWidget()
         self.tabWidget.addTab(self.tab_current_utilization, "Auslastungen")
 
-        self.lb_cpu_utilization_description = QLabel(self.tab_current_utilization)
-        self.lb_cpu_utilization_description.setGeometry(QRect(15, 15, 200, 25))
-        self.lb_cpu_utilization_description.setText("CPU-Auslastung")
+
+        self.lb_current_utilization_title = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_title.setGeometry(QRect(15, 10, self.lb_x_default, 40))
+        self.lb_current_utilization_title.setStyleSheet("font-size: 15px; font-weight: 600")
+        self.lb_current_utilization_title.setText("Aktuelle Auslastungen:")
+
+        self.lb_current_utilization_cpu_utilization_description = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_cpu_utilization_description.setGeometry(QRect(15, 40, self.lb_x_default, self.lb_y_default))
+        self.lb_current_utilization_cpu_utilization_description.setText("CPU:")
         
-        self.lb_cpu_utilization_value = QLabel(self.tab_current_utilization)
-        self.lb_cpu_utilization_value.setGeometry(QRect(200, 15, 400, 25))
+        self.lb_current_utilization_cpu_utilization_value = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_cpu_utilization_value.setGeometry(QRect(115, 40, 50, self.lb_y_default))
 
 
-        self.lb_ram_utilization_description = QLabel(self.tab_current_utilization)
-        self.lb_ram_utilization_description.setGeometry(QRect(15, 50, 200, 25))
-        self.lb_ram_utilization_description.setText("Arbeitsspeicher-Auslastung")
+        self.lb_current_utilization_ram_utilization_description = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_ram_utilization_description.setGeometry(QRect(15, 65, self.lb_x_default, self.lb_y_default))
+        self.lb_current_utilization_ram_utilization_description.setText("Arbeitsspeicher:")
         
-        self.lb_ram_utilization_value = QLabel(self.tab_current_utilization)
-        self.lb_ram_utilization_value.setGeometry(QRect(200, 50, 400, 25))
+        self.lb_current_utilization_ram_utilization_value = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_ram_utilization_value.setGeometry(QRect(115, 65, 50, self.lb_y_default))
+
+
+        self.lb_current_utilization_processes_utilization_description = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_processes_utilization_description.setGeometry(QRect(15, 90, self.lb_x_default, self.lb_y_default))
+        self.lb_current_utilization_processes_utilization_description.setText("Anzahl Prozesse:")
         
+        self.lb_current_utilization_processes_utilization_value = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_processes_utilization_value.setGeometry(QRect(115, 90, 50, self.lb_y_default))
+
+
+        self.lb_current_utilization_system_time_utilization_description = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_system_time_utilization_description.setGeometry(QRect(15, 115, self.lb_x_default, self.lb_y_default))
+        self.lb_current_utilization_system_time_utilization_description.setText("Systemzeit:")
         
-        self.lb_number_processes_description = QLabel(self.tab_current_utilization)
-        self.lb_number_processes_description.setGeometry(QRect(15, 85, 200, 25))
-        self.lb_number_processes_description.setText("Anzahl laufender Prozesse")
-        
-        self.lb_number_processes_value = QLabel(self.tab_current_utilization)
-        self.lb_number_processes_value.setGeometry(QRect(200, 85, 400, 25))
+        self.lb_current_utilization_system_time_utilization_value = QLabel(self.tab_current_utilization)
+        self.lb_current_utilization_system_time_utilization_value.setGeometry(QRect(115, 115, 50, self.lb_y_default))
         
         
     def initGraph(self):
@@ -1193,22 +1209,69 @@ class Monitoring(QMainWindow):
 
         self.tab_graph_mon_cpu = QWidget()
         self.tab_graph_mon.addTab(self.tab_graph_mon_cpu, "CPU")
-        PlotCanvas(self.tab_graph_mon_cpu, width=6, height=4, pickle_file="mon_cpu.pickle").move(50, 50)
+        PlotCanvas(self.tab_graph_mon_cpu, width=8, height=4, pickle_file="mon_cpu.pickle").move(50, 50)
 
         self.tab_graph_mon_ram = QWidget()
         self.tab_graph_mon.addTab(self.tab_graph_mon_ram, "Arbeitsspeicher")
-        PlotCanvas(self.tab_graph_mon_ram, width=6, height=4, pickle_file="mon_ram.pickle").move(50, 50)
+        PlotCanvas(self.tab_graph_mon_ram, width=8, height=4, pickle_file="mon_ram.pickle").move(50, 50)
+        
 
-        for drive in self.drives:
-            self.tab_current_drive = QWidget()
-            self.tab_graph_mon.addTab(self.tab_current_drive, f"Laufwerk {drive}")
-            PlotCanvas(self.tab_current_drive, width=6, height=4, pickle_file=f"mon_{drive.replace(':', '')}.pickle").move(50, 50)
+        self.lb_graph_mon_title = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_title.setGeometry(QRect(self.width-210, 110, self.lb_x_default, 40))
+        self.lb_graph_mon_title.setStyleSheet("font-size: 15px; font-weight: 600")
+        self.lb_graph_mon_title.setText("Aktuelle Auslastungen:")
+
+        self.lb_graph_mon_cpu_description = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_cpu_description.setGeometry(QRect(self.width-210, 140, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_cpu_description.setText("CPU:")
+
+        self.lb_graph_mon_cpu_value = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_cpu_value.setGeometry(QRect(self.width-110, 140, 50, self.lb_y_default))
+
+
+        self.lb_graph_mon_ram_description = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_ram_description.setGeometry(QRect(self.width-210, 165, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_ram_description.setText("Arbeitsspeicher:")
+
+        self.lb_graph_mon_ram_value = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_ram_value.setGeometry(QRect(self.width-110, 165, 50, self.lb_y_default))
+
+
+        self.lb_graph_mon_processes_description = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_processes_description.setGeometry(QRect(self.width-210, 190, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_processes_description.setText("Anzahl Prozesse:")
+
+        self.lb_graph_mon_processes_value = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_processes_value.setGeometry(QRect(self.width-110, 190, 50, self.lb_y_default))
+
+
+        self.lb_graph_mon_system_time_description = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_system_time_description.setGeometry(QRect(self.width-210, 215, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_system_time_description.setText("Systemzeit:")
+
+        self.lb_graph_mon_system_time_value = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_system_time_value.setGeometry(QRect(self.width-110, 215, 50, self.lb_y_default))
+
 
     def refresh_current_utilization(self):
-        self.lb_cpu_utilization_value.setText(str(psutil.cpu_percent()) + " %")
-        self.lb_ram_utilization_value.setText(str(round(get_virtual_memory()["percent"], 2)) + " %")
-        self.lb_number_processes_value.setText(str(len(psutil.pids())))       
+        cpu = str(psutil.cpu_percent()) + " %"
+        ram = str(round(get_virtual_memory()["percent"], 2)) + " %"
+        processes = str(len(psutil.pids()))
+        system_time = str(round(time.time() - self.start_system_time)) + " s"
 
+        self.lb_current_utilization_cpu_utilization_value.setText(cpu)
+        self.lb_current_utilization_ram_utilization_value.setText(ram)
+        self.lb_current_utilization_processes_utilization_value.setText(processes)
+        self.lb_current_utilization_system_time_utilization_value.setText(system_time)
+
+        self.lb_graph_mon_cpu_value.setText(cpu)
+        self.lb_graph_mon_ram_value.setText(ram)
+        self.lb_graph_mon_processes_value.setText(processes)
+        self.lb_graph_mon_system_time_value.setText(system_time)
+
+        """
+        GIT - Neuen Branch und versuchen, das Monitoring hier laufen zu lassen
+        """
 
         if self.current_timer % 10 == 0:
             self.lb_error.clear()
@@ -1221,18 +1284,15 @@ class Monitoring(QMainWindow):
 
 class PlotCanvas(FigureCanvas):
 
-    def __init__(self, parent=None, width=5, height=4, dpi=100, pickle_file=None):
+    def __init__(self, parent=None, width=8, height=4, dpi=100, pickle_file=None):
         self.file = pickle_file
-
-        #self.start_time = 0
 
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axis = self.fig.add_subplot(1, 1, 1)
-        
+        self.axis.set_ylabel("Auslastung in %")
         self.axis.get_xaxis().set_visible(False)
 
         self.axis.set_ylim(ymin=0, ymax=100)
-        self.axis.set_ylabel("Auslastung in %")
 
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
@@ -1267,7 +1327,7 @@ class PlotCanvas(FigureCanvas):
 
                 self.axis.legend(loc='upper left')
             except Exception as e:
-                log("Logs/monitoring.log", "info", f"Graph-Animation nicht möglich. Fehler: {e}")
+                log("Logs/monitoring.log", "error", f"Graph-Animation nicht möglich. Fehler: {e}")
 
         else:
             self.axis.clear()
