@@ -144,7 +144,6 @@ class Monitoring(QMainWindow):
         
         
         self.push_logs()
-        
 
     def closeEvent(self, event):
         """
@@ -176,7 +175,6 @@ class Monitoring(QMainWindow):
         else:
             log("Logs/system.log", "info", f"Programm nach {round(time.time()-self.start_system_time, 2)} Sekunden beendet")
             
-
     def initWindow(self):
         # Mainwindow Einstellungen
         self.setWindowTitle(self.title)
@@ -684,7 +682,6 @@ class Monitoring(QMainWindow):
 
         with open(data[0], "w") as x:
             x.write(dom.toprettyxml())
-            
 
     def save_json(self):
         data = QFileDialog.getSaveFileName(self, "Speichern", "", "JSON (*.json)")
