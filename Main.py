@@ -135,7 +135,8 @@ class Monitoring(QMainWindow):
 
             except Exception as e:
                 self.lb_config_warnings.setStyleSheet("color: red")
-                self.lb_config_warnings.setText(e)
+                self.lb_config_warnings.setText(f"{e}")
+                self.current_config = None
                 log("Logs/system.log", "error", f"Initialisierung Temp/running_config schlug fehl: {e}")
 
         else:
