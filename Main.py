@@ -682,6 +682,8 @@ class Monitoring(QMainWindow):
 
         with open(data[0], "w") as x:
             x.write(dom.toprettyxml())
+        
+        self.lb_info_saved.setText(f"Gespeichert unter {data[0]}")
 
     def save_json(self):
         data = QFileDialog.getSaveFileName(self, "Speichern", "", "JSON (*.json)")
@@ -725,31 +727,32 @@ class Monitoring(QMainWindow):
         self.tab_logs_all.currentChanged.connect(self.push_logs)
 
     def push_logs(self):
-        if self.current_config is not None:
-            try:
+        try:
+            
+            logs_path = "Logs/system.log"
+            if os.path.isfile(logs_path):
+                with open(logs_path) as f:
+                    logs = f.read()
+                    self.tb_logs_system_logs.setText(logs)
+                    self.tb_logs_system_logs.moveCursor(QtGui.QTextCursor.End)
+            
+            logs_path = "Logs/monitoring.log"
+            if os.path.isfile(logs_path):
+                with open(logs_path) as f:
+                    logs = f.read()
+                    self.tb_logs_monitoring_logs.setText(logs)
+                    self.tb_logs_monitoring_logs.moveCursor(QtGui.QTextCursor.End)
+
+            if self.current_config is not None:
                 logs_path = f"{self.current_config['logs_path']}/limits.log"
                 if os.path.isfile(logs_path):
                     with open(logs_path) as f:
                         logs = f.read()
                         self.tb_logs_threshold_limits.setText(logs)
                         self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
-                                        
-                logs_path = "Logs/system.log"
-                if os.path.isfile(logs_path):
-                    with open(logs_path) as f:
-                        logs = f.read()
-                        self.tb_logs_system_logs.setText(logs)
-                        self.tb_logs_system_logs.moveCursor(QtGui.QTextCursor.End)
-                
-                logs_path = "Logs/monitoring.log"
-                if os.path.isfile(logs_path):
-                    with open(logs_path) as f:
-                        logs = f.read()
-                        self.tb_logs_monitoring_logs.setText(logs)
-                        self.tb_logs_monitoring_logs.moveCursor(QtGui.QTextCursor.End)
-
-            except:
-                pass
+                                                
+        except:
+            pass
     
     def initConfig(self):
         self.tab_config = QWidget()
@@ -1335,26 +1338,26 @@ class Monitoring(QMainWindow):
             hard = int(self.current_config["limits"]["cpu"]["hard"])
 
             if soft <= cpu < hard:
-                self.lb_graph_mon_cpu_avg_value.setStyleSheet("color: orange")
+                self.lb_graph_mon_cpu_value.setStyleSheet("color: orange")
             elif cpu >= hard:
-                self.lb_graph_mon_cpu_avg_value.setStyleSheet("color: red")
+                self.lb_graph_mon_cpu_value.setStyleSheet("color: red")
             else:
-                self.lb_graph_mon_cpu_avg_value.setStyleSheet("color: green")
+                self.lb_graph_mon_cpu_value.setStyleSheet("color: green")
         else:
-            self.lb_graph_mon_cpu_avg_value.setStyleSheet("color: black")
+            self.lb_graph_mon_cpu_value.setStyleSheet("color: black")
 
         if "Arbeitsspeicher" in self.monitoring:
             soft = int(self.current_config["limits"]["cpu"]["soft"])
             hard = int(self.current_config["limits"]["cpu"]["hard"])
 
             if soft <= ram < hard:
-                self.lb_graph_mon_ram_avg_value.setStyleSheet("color: orange")
+                self.lb_graph_mon_ram_value.setStyleSheet("color: orange")
             elif ram >= hard:
-                self.lb_graph_mon_ram_avg_value.setStyleSheet("color: red")
+                self.lb_graph_mon_ram_value.setStyleSheet("color: red")
             else:
-                self.lb_graph_mon_ram_avg_value.setStyleSheet("color: green")
+                self.lb_graph_mon_ram_value.setStyleSheet("color: green")
         else:
-            self.lb_graph_mon_ram_avg_value.setStyleSheet("color: black")
+            self.lb_graph_mon_ram_value.setStyleSheet("color: black")
         
         
 
@@ -1378,7 +1381,7 @@ class PlotCanvas(FigureCanvas):
         self.axis.set_ylabel("Auslastung in %")
         self.axis.set_xlabel("Zeit in s")
 
-        self.axis.set_ylim(ymin=0, ymax=100)
+        self.axis.set_ylim(ymin=0, ymax=105)
 
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
@@ -1408,7 +1411,7 @@ class PlotCanvas(FigureCanvas):
                 self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
                 
                 self.axis.clear()
-                self.axis.set_ylim(ymin=0, ymax=100)
+                self.axis.set_ylim(ymin=0, ymax=105)
 
                 #self.axis.get_xaxis().set_visible(False)
 
@@ -1427,7 +1430,7 @@ class PlotCanvas(FigureCanvas):
             # Scaling is in int, not float
             self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
             self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
-            self.axis.set_ylim(ymin=0, ymax=100)
+            self.axis.set_ylim(ymin=0, ymax=105)
             
 
 if __name__ == "__main__":
