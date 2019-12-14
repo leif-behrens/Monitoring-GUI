@@ -1,65 +1,84 @@
-from PyQt5 import QtGui
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QRect, QTimer
-from PyQt5.QtGui import QIcon, QTextCursor
+# Python standard librariess
 import sys
-from functions import *
-import psutil
 import multiprocessing
 import json
 import smtplib
 import base64
 import shutil
+import pickle
+import glob
+import uuid
+import re
+import datetime
+from xml.dom.minidom import parseString
+
+# 3rd party libraries
+from PyQt5 import QtGui
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import Qt, QRect, QTimer
+from PyQt5.QtGui import QIcon, QTextCursor
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import style
 from matplotlib.ticker import MaxNLocator
-import pickle
-import glob
-import uuid
-import re
-import datetime
+import psutil
 import dicttoxml
-from xml.dom.minidom import parseString
+
+# local library
+from functions import *
 
 
 class Monitoring(QMainWindow):
     def __init__(self):
         super().__init__()
+        
         self.title = "Monitoring"
         self.icon = "Images/Icon.png"
         
         self.width = 1000
         self.height = 600
 
+        # default labelsizes
         self.lb_x_default = 200
         self.lb_y_default = 25
 
+        # system-starttime 
         self.start_system_time = time.time()
+
+        # values for the graph
         self.cpu_values = []
         self.ram_values = []
         self.systemtime_values = []
 
-        self.processes = {}     # {<name of monitoring>: <PID>}
-        self.monitoring = []    # List with the names of monitorings for the current running monitorings (QListWigdet)
-        self.drives = get_pc_information()["drives"]    # List with all drives
+        # {<name of monitoring>: <PID>}
+        self.processes = {}
 
-        self.drive_chosen = {}  # dictionary for the soft- and hardlimits
+        # List with the names of monitorings for the current running monitorings (QListWigdet)
+        self.monitoring = []
+
+        # List with all drives
+        self.drives = get_pc_information()["drives"]
+
+        # dictionary for the soft- and hardlimits
+        self.drive_chosen = {}  
         for drive in self.drives:
             self.drive_chosen[drive] = {"soft": "", "hard": ""}
-        self.mail_access = False    # Bool for checking if the login credentials of the mailaccount are valid
+
+        # Bool for checking if the login credentials of the mailaccount are valid
+        self.mail_access = False    
 
         log("Logs/system.log", "info", "Programm gestartet")
 
+        # QTimer - for refreshing values every second
         self.timer_refresh_current_utilization = QTimer(self)
         self.timer_refresh_current_utilization.timeout.connect(self.refresh_current_utilization)
         self.timer_refresh_current_utilization.start(1000)
         self.current_timer = 0
         
-        
-        self.initWindow()   # initialize Main Window
+        # initialize Main Window
+        self.initWindow()
         
         # if the startup_config.ini - File exists the current_configuration initialiaze
         if os.path.isfile("startup_config.ini"):
@@ -142,9 +161,6 @@ class Monitoring(QMainWindow):
         else:
             self.current_config = None
             log("Logs/system.log", "info", f"current_config.ini existiert nicht")
-        
-        
-        self.push_logs()
 
     def closeEvent(self, event):
         """
@@ -217,7 +233,7 @@ class Monitoring(QMainWindow):
         self.lb_cpu_start_stop.setText("CPU-Monitoring")
 
         self.btn_cpu_start_stop = QPushButton(self.tab_monitoring)
-        self.btn_cpu_start_stop.setGeometry(QRect(200, 15, 130, 25))
+        self.btn_cpu_start_stop.setGeometry(QRect(200, y, 130, self.lb_y_default))
         self.btn_cpu_start_stop.setText("Start")
         y += 35
         
@@ -227,7 +243,7 @@ class Monitoring(QMainWindow):
         self.lb_ram_start_stop.setText("Arbeitsspeicher-Monitoring")
 
         self.btn_ram_start_stop = QPushButton(self.tab_monitoring)
-        self.btn_ram_start_stop.setGeometry(QRect(200, y, 130, 25))
+        self.btn_ram_start_stop.setGeometry(QRect(200, y, 130, self.lb_y_default))
         self.btn_ram_start_stop.setText("Start")
         y += 35
         
@@ -276,11 +292,7 @@ class Monitoring(QMainWindow):
     def start_disk(self, disk):
         """
         :param disk: current chosen disk in the combobox
-        """
-        # Initialisiere Errorlabel und Statuslabel
-        self.lb_error.clear()
-        self.lb_status.clear()
-        
+        """        
 
         # Only if the current_config is initialized you can start monitoring
         if self.current_config is not None:
@@ -503,9 +515,11 @@ class Monitoring(QMainWindow):
         """
         Initializing the "Computerinformationen"-Tab and sets all the values 
         """
+
         self.pc_info = get_pc_information()
         self.lb_x_value = 400
         
+        # set the computerinformation to variables
         self.current_user = self.pc_info["current_user"]
         self.hostname = self.pc_info["hostname"]
         self.boot_time = datetime.datetime.fromtimestamp(psutil.boot_time()).strftime("%d.%m.%Y %H:%M:%S")
@@ -519,6 +533,7 @@ class Monitoring(QMainWindow):
         self.memory = self.pc_info["memory"]
         self.drives = self.pc_info["drives"] 
 
+        # set the information a dictionary in case the user wants to save the information to a xml or json file
         self.computerinfo = {"timestamp": time.strftime('%d.%m.%y %H:%M:%S'),
                              "current_user": self.current_user, 
                              "hostname": self.hostname,
@@ -684,18 +699,30 @@ class Monitoring(QMainWindow):
         xml = dicttoxml.dicttoxml(self.computerinfo)
         dom = parseString(xml)
 
-        with open(data[0], "w") as x:
-            x.write(dom.toprettyxml())
+        try:
+            if data[0]:
+                with open(data[0], "w") as x:
+                    x.write(dom.toprettyxml())
+                
+                self.lb_info_saved.setText(f"Gespeichert unter {data[0]}")
+                log("Logs/system.log", "info", f"Computerinformationen als json unter {data[0]} gespeichert.")
         
-        self.lb_info_saved.setText(f"Gespeichert unter {data[0]}")
+        except Exception as e:
+            log("Logs/system.log", "error", f"Computerinformationen konnte nicht als json unter {data[0]} gespeichert werden. Fehler: {e}")
 
     def save_json(self):
         data = QFileDialog.getSaveFileName(self, "Speichern", "", "JSON (*.json)")
+        
+        try:
+            if data[0]:                    
+                with open(data[0], "w") as j:
+                    json.dump(self.computerinfo, j, indent=4)
 
-        with open(data[0], "w") as j:
-            json.dump(self.computerinfo, j, indent=4)
+                self.lb_info_saved.setText(f"Gespeichert unter {data[0]}")
+                log("Logs/system.log", "info", f"Computerinformationen als xml unter {data[0]} gespeichert.")
 
-        self.lb_info_saved.setText(f"Gespeichert unter {data[0]}")
+        except Exception as e:
+            log("Logs/system.log", "error", f"Computerinformationen konnte nicht als xml unter {data[0]} gespeichert werden. Fehler: {e}")
 
     def initLogs(self):
         self.tab_logs = QWidget()
@@ -763,88 +790,88 @@ class Monitoring(QMainWindow):
         self.tabWidget.addTab(self.tab_config, "Konfigurieren")
 
         self.lb_logs_destination_description = QLabel(self.tab_config)
-        self.lb_logs_destination_description.setGeometry(QRect(15, 15, 100, 25))
+        self.lb_logs_destination_description.setGeometry(QRect(15, 15, 100, self.lb_y_default))
         self.lb_logs_destination_description.setText("Pfad der Logs")
 
         self.le_logs_destination_value = QLineEdit(self.tab_config)
-        self.le_logs_destination_value.setGeometry(QRect(115, 15, 650, 25))
+        self.le_logs_destination_value.setGeometry(QRect(115, 15, 650, self.lb_y_default))
         self.le_logs_destination_value.setDisabled(True)
         
         self.btn_log_path = QPushButton(self.tab_config)
-        self.btn_log_path.setGeometry(QRect(765, 15, 25, 25))
+        self.btn_log_path.setGeometry(QRect(765, 15, 25, self.lb_y_default))
         self.btn_log_path.setText("...")
 
         self.lb_mail_receiver = QLabel(self.tab_config)
-        self.lb_mail_receiver.setGeometry(QRect(15, 50, 330, 25))
+        self.lb_mail_receiver.setGeometry(QRect(15, 50, 330, self.lb_y_default))
         self.lb_mail_receiver.setText("Mailadresse(n) eingeben. Mehrfache Eingabe mit Semikolon trennen:")
 
         self.le_mail_receiver = QLineEdit(self.tab_config)
-        self.le_mail_receiver.setGeometry(QRect(350, 50, 415, 25))
+        self.le_mail_receiver.setGeometry(QRect(350, 50, 415, self.lb_y_default))
 
         self.lb_attachment_sent = QLabel(self.tab_config)
-        self.lb_attachment_sent.setGeometry(QRect(15, 85, 200, 25))
+        self.lb_attachment_sent.setGeometry(QRect(15, 85, self.lb_x_default, self.lb_y_default))
         self.lb_attachment_sent.setText("Logs-Anhang")
 
         self.cb_attachment_sent = QComboBox(self.tab_config)
-        self.cb_attachment_sent.setGeometry(QRect(115, 85, 50, 25))
+        self.cb_attachment_sent.setGeometry(QRect(115, 85, 50, self.lb_y_default))
         self.cb_attachment_sent.addItem("Nein")
         self.cb_attachment_sent.addItem("Ja")
 
 
         self.lb_softlimit_description = QLabel(self.tab_config)
-        self.lb_softlimit_description.setGeometry(QRect(115, 130, 60, 25))
+        self.lb_softlimit_description.setGeometry(QRect(115, 130, 60, self.lb_y_default))
         self.lb_softlimit_description.setText("Softlimit %")
 
         self.lb_hardlimit_description = QLabel(self.tab_config)
-        self.lb_hardlimit_description.setGeometry(QRect(180, 130, 60, 25))
+        self.lb_hardlimit_description.setGeometry(QRect(180, 130, 60, self.lb_y_default))
         self.lb_hardlimit_description.setText("Hardlimit %")
 
         self.lb_cpu_description = QLabel(self.tab_config)
-        self.lb_cpu_description.setGeometry(QRect(15, 155, 200, 25))
+        self.lb_cpu_description.setGeometry(QRect(15, 155, 200, self.lb_y_default))
         self.lb_cpu_description.setText("CPU")
 
         self.cb_cpu_softlimit = QComboBox(self.tab_config)
-        self.cb_cpu_softlimit.setGeometry(QRect(115, 155, 50, 25))
+        self.cb_cpu_softlimit.setGeometry(QRect(115, 155, 50, self.lb_y_default))
 
         self.cb_cpu_hardlimit = QComboBox(self.tab_config)
-        self.cb_cpu_hardlimit.setGeometry(QRect(180, 155, 50, 25))
+        self.cb_cpu_hardlimit.setGeometry(QRect(180, 155, 50, self.lb_y_default))
 
         self.lb_cpu_limit_status = QLabel(self.tab_config)
-        self.lb_cpu_limit_status.setGeometry(QRect(250, 155, 200, 25))
+        self.lb_cpu_limit_status.setGeometry(QRect(250, 155, self.lb_x_default, self.lb_y_default))
 
 
         self.lb_ram_description = QLabel(self.tab_config)
-        self.lb_ram_description.setGeometry(QRect(15, 190, 200, 25))
+        self.lb_ram_description.setGeometry(QRect(15, 190, self.lb_x_default, self.lb_y_default))
         self.lb_ram_description.setText("Arbeitsspeicher")
         
         self.cb_ram_softlimit = QComboBox(self.tab_config)
-        self.cb_ram_softlimit.setGeometry(QRect(115, 190, 50, 25))
+        self.cb_ram_softlimit.setGeometry(QRect(115, 190, 50, self.lb_y_default))
 
         self.cb_ram_hardlimit = QComboBox(self.tab_config)
-        self.cb_ram_hardlimit.setGeometry(QRect(180, 190, 50, 25))
+        self.cb_ram_hardlimit.setGeometry(QRect(180, 190, 50, self.lb_y_default))
 
         self.lb_ram_limit_status = QLabel(self.tab_config)
-        self.lb_ram_limit_status.setGeometry(QRect(250, 190, 200, 25))
+        self.lb_ram_limit_status.setGeometry(QRect(250, 190, self.lb_x_default, self.lb_y_default))
 
         
         self.lb_drives_description = QLabel(self.tab_config)
-        self.lb_drives_description.setGeometry(QRect(15, 225, 200, 25))
+        self.lb_drives_description.setGeometry(QRect(15, 225, self.lb_x_default, self.lb_y_default))
         self.lb_drives_description.setText("Laufwerk")
 
         self.cb_drives_limits = QComboBox(self.tab_config)
-        self.cb_drives_limits.setGeometry(QRect(70, 225, 40, 25))
+        self.cb_drives_limits.setGeometry(QRect(70, 225, 40, self.lb_y_default))
 
         for drive in self.drives:
             self.cb_drives_limits.addItem(drive)
 
         self.cb_drives_softlimit = QComboBox(self.tab_config)
-        self.cb_drives_softlimit.setGeometry(QRect(115, 225, 50, 25))
+        self.cb_drives_softlimit.setGeometry(QRect(115, 225, 50, self.lb_y_default))
         
         self.cb_drives_hardlimit = QComboBox(self.tab_config)
-        self.cb_drives_hardlimit.setGeometry(QRect(180, 225, 50, 25))
+        self.cb_drives_hardlimit.setGeometry(QRect(180, 225, 50, self.lb_y_default))
 
         self.lb_drives_limit_status = QLabel(self.tab_config)
-        self.lb_drives_limit_status.setGeometry(QRect(250, 225, 200, 25))
+        self.lb_drives_limit_status.setGeometry(QRect(250, 225, self.lb_x_default, self.lb_y_default))
 
 
         self.cb_cpu_softlimit.addItem("")
@@ -865,57 +892,57 @@ class Monitoring(QMainWindow):
 
 
         self.lb_mail_sender = QLabel(self.tab_config)
-        self.lb_mail_sender.setGeometry(QRect(15, 300, 200, 25))
+        self.lb_mail_sender.setGeometry(QRect(15, 300, self.lb_x_default, self.lb_y_default))
         self.lb_mail_sender.setText("Sender-Mailadresse")
 
         self.le_mail_sender = QLineEdit(self.tab_config)
-        self.le_mail_sender.setGeometry(QRect(115, 300, 200, 25))
+        self.le_mail_sender.setGeometry(QRect(115, 300, self.lb_x_default, self.lb_y_default))
 
 
         self.lb_mail_password = QLabel(self.tab_config)
-        self.lb_mail_password.setGeometry(QRect(15, 335, 200, 25))
+        self.lb_mail_password.setGeometry(QRect(15, 335, self.lb_x_default, self.lb_y_default))
         self.lb_mail_password.setText("Passwort")
 
         self.le_mail_password = QLineEdit(self.tab_config)
-        self.le_mail_password.setGeometry(QRect(115, 335, 200, 25))
+        self.le_mail_password.setGeometry(QRect(115, 335, self.lb_x_default, self.lb_y_default))
         self.le_mail_password.setEchoMode(QLineEdit.Password)
 
 
         self.lb_mail_server = QLabel(self.tab_config)
-        self.lb_mail_server.setGeometry(QRect(15, 370, 200, 25))
+        self.lb_mail_server.setGeometry(QRect(15, 370, self.lb_x_default, self.lb_y_default))
         self.lb_mail_server.setText("Mailserver")
         
         self.le_mail_server = QLineEdit(self.tab_config)
-        self.le_mail_server.setGeometry(QRect(115, 370, 200, 25))
+        self.le_mail_server.setGeometry(QRect(115, 370, self.lb_x_default, self.lb_y_default))
         
 
         self.lb_mail_server_port = QLabel(self.tab_config)
-        self.lb_mail_server_port.setGeometry(QRect(15, 405, 200, 25))
+        self.lb_mail_server_port.setGeometry(QRect(15, 405, self.lb_x_default, self.lb_y_default))
         self.lb_mail_server_port.setText("Port")
         
         self.le_mail_server_port = QLineEdit(self.tab_config)
-        self.le_mail_server_port.setGeometry(QRect(115, 405, 40, 25))
+        self.le_mail_server_port.setGeometry(QRect(115, 405, 40, self.lb_y_default))
 
         
         self.btn_validate_login = QPushButton(self.tab_config)
-        self.btn_validate_login.setGeometry(QRect(160, 405, 155, 25))
+        self.btn_validate_login.setGeometry(QRect(160, 405, 155, self.lb_y_default))
         self.btn_validate_login.setText("Validiere Zugangsdaten")
 
 
         self.lb_validate_login = QLabel(self.tab_config)
-        self.lb_validate_login.setGeometry(QRect(15, 440, 400, 25))
+        self.lb_validate_login.setGeometry(QRect(15, 440, 400, self.lb_y_default))
 
 
         self.lb_config_warnings = QLabel(self.tab_config)
-        self.lb_config_warnings.setGeometry(QRect(15, self.height-100, self.width-30, 25))
+        self.lb_config_warnings.setGeometry(QRect(15, self.height-100, self.width-30, self.lb_y_default))
         self.lb_config_warnings.setStyleSheet("color: red")
 
         self.btn_running_config = QPushButton(self.tab_config)
-        self.btn_running_config.setGeometry(QRect(15, self.height-70, 180, 25))
+        self.btn_running_config.setGeometry(QRect(15, self.height-70, 180, self.lb_y_default))
         self.btn_running_config.setText("Laufende Konfiguration speichern")
         
         self.btn_startup_config = QPushButton(self.tab_config)
-        self.btn_startup_config.setGeometry(QRect(200, self.height-70, 180, 25))
+        self.btn_startup_config.setGeometry(QRect(200, self.height-70, 180, self.lb_y_default))
         self.btn_startup_config.setText("Startup Konfiguration speichern")
 
         self.btn_log_path.clicked.connect(self.get_path)
