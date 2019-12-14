@@ -211,36 +211,39 @@ class Monitoring(QMainWindow):
         self.tab_monitoring = QWidget()
         self.tabWidget.addTab(self.tab_monitoring, "Monitoring")
 
+        y = 15
         self.lb_cpu_start_stop = QLabel(self.tab_monitoring)
-        self.lb_cpu_start_stop.setGeometry(QRect(15, 15, self.lb_x_default, self.lb_y_default))
+        self.lb_cpu_start_stop.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_cpu_start_stop.setText("CPU-Monitoring")
 
         self.btn_cpu_start_stop = QPushButton(self.tab_monitoring)
         self.btn_cpu_start_stop.setGeometry(QRect(200, 15, 130, 25))
         self.btn_cpu_start_stop.setText("Start")
+        y += 35
         
 
         self.lb_ram_start_stop = QLabel(self.tab_monitoring)
-        self.lb_ram_start_stop.setGeometry(QRect(15, 50, self.lb_x_default, self.lb_y_default))
+        self.lb_ram_start_stop.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_ram_start_stop.setText("Arbeitsspeicher-Monitoring")
 
         self.btn_ram_start_stop = QPushButton(self.tab_monitoring)
-        self.btn_ram_start_stop.setGeometry(QRect(200, 50, 130, 25))
+        self.btn_ram_start_stop.setGeometry(QRect(200, y, 130, 25))
         self.btn_ram_start_stop.setText("Start")
+        y += 35
         
 
         self.lb_disk_start_stop = QLabel(self.tab_monitoring)
-        self.lb_disk_start_stop.setGeometry(QRect(15, 85, self.lb_x_default-50, self.lb_y_default))
+        self.lb_disk_start_stop.setGeometry(QRect(15, y, self.lb_x_default-50, self.lb_y_default))
         self.lb_disk_start_stop.setText("Festplatten-Monitoring")
 
         self.cb_disk_mon = QComboBox(self.tab_monitoring)
-        self.cb_disk_mon.setGeometry(QRect(150, 85, 40, 25))
+        self.cb_disk_mon.setGeometry(QRect(150, y, 40, self.lb_y_default))
 
         for drive in self.drives:
             self.cb_disk_mon.addItem(drive)
     
         self.btn_disk_start_stop = QPushButton(self.tab_monitoring)
-        self.btn_disk_start_stop.setGeometry(QRect(200, 85, 130, 25))
+        self.btn_disk_start_stop.setGeometry(QRect(200, y, 130, self.lb_y_default))
         self.btn_disk_start_stop.setText("Start")
 
         self.lb_monitoring_description = QLabel(self.tab_monitoring)
@@ -248,7 +251,7 @@ class Monitoring(QMainWindow):
         self.lb_monitoring_description.setText("Laufende Monitorings:")
 
         self.lw_processes = QListWidget(self.tab_monitoring)
-        self.lw_processes.setGeometry(QRect(15, 155, 100, 200))
+        self.lw_processes.setGeometry(QRect(15, 165, 100, 200))
         
         self.lb_error = QLabel(self.tab_monitoring)
         self.lb_error.setGeometry(QRect(15, self.height-50, self.width-50, self.lb_y_default))
