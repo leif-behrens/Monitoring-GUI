@@ -1,13 +1,9 @@
-test.py
-/monitoring_venv
-/.idea
-untitled.ui
-/Monitoring_Abgabe_Konsole
-/__pycache__
-Config.ini
-untitled2.ui
-bla.py
-startup_config.ini
-/Graph Test
-/.vscode
-Logs/*
+*
+!.gitignore
+!functions.py
+!Main.py
+!README.md
+!/Logs
+!/Images
+!/Temp
+!/requirements.txt
