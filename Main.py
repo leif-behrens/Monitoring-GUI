@@ -20,13 +20,16 @@ import pickle
 import glob
 import uuid
 import re
+import datetime
+import dicttoxml
+from xml.dom.minidom import parseString
 
 
 class Monitoring(QMainWindow):
     def __init__(self):
         super().__init__()
         self.title = "Monitoring"
-        self.icon = "Icon.png"
+        self.icon = "Images/Icon.png"
         
         self.width = 1000
         self.height = 600
@@ -35,6 +38,9 @@ class Monitoring(QMainWindow):
         self.lb_y_default = 25
 
         self.start_system_time = time.time()
+        self.cpu_values = []
+        self.ram_values = []
+        self.systemtime_values = []
 
         self.processes = {}     # {<name of monitoring>: <PID>}
         self.monitoring = []    # List with the names of monitorings for the current running monitorings (QListWigdet)
@@ -125,12 +131,12 @@ class Monitoring(QMainWindow):
                             self.drive_chosen[limit[-2:]]["hard"] = self.current_config["limits"][limit[-2:]]["hard"]
                 self.cb_drives_limits_refresh()
 
-                shutil.copy("startup_config.ini", "running_config.ini")
+                shutil.copy("startup_config.ini", "Temp/running_config.ini")
 
             except Exception as e:
                 self.lb_config_warnings.setStyleSheet("color: red")
                 self.lb_config_warnings.setText(e)
-                log("Logs/system.log", "error", f"Initialisierung running_config schlug fehl: {e}")
+                log("Logs/system.log", "error", f"Initialisierung Temp/running_config schlug fehl: {e}")
 
         else:
             self.current_config = None
@@ -147,9 +153,9 @@ class Monitoring(QMainWindow):
 
         try:
             # Delete running_config.ini File
-            if os.path.isfile("running_config.ini"):
-                os.remove("running_config.ini")
-                log("Logs/system.log", "info", "running_config.ini-Datei wurde gelöscht")
+            if os.path.isfile("Temp/running_config.ini"):
+                os.remove("Temp/running_config.ini")
+                log("Logs/system.log", "info", "Temp/running_config.ini-Datei wurde gelöscht")
 
             # Kill all (monitoring) processes
             for mon, pid in self.processes.items():
@@ -160,7 +166,7 @@ class Monitoring(QMainWindow):
                     log("Logs/monitoring.log", "error", f"{mon}-Monitoring mit der Prozess-ID {pid} war bereits beendet")
             
             # Delete all pickle-Files
-            for f in glob.glob("*.pickle"):
+            for f in glob.glob("Temp/*.pickle"):
                 os.remove(f)
                 log("Logs/system.log", "info", f"{f}-Datei wurde gelöscht")
             
@@ -186,7 +192,7 @@ class Monitoring(QMainWindow):
         self.initComputerinformation()
         self.initLogs()        
         self.initConfig()        
-        self.initCurrentUtilization()
+        #self.initCurrentUtilization()
         self.initGraph()
         
         # Anzeige der GUI
@@ -331,14 +337,6 @@ class Monitoring(QMainWindow):
 
                     for mon in self.monitoring:
                         self.lw_processes.addItem(mon)
-
-                    try:
-                        os.remove(f"mon_{disk.replace(':', '')}.pickle")
-                        log("Logs/system.log", "info", f"mon_{disk.replace(':', '')}.pickle-Datei wurde gelöscht")
-
-                    except Exception as e:
-                        log("Logs/system.log", "error", f"mon_{disk.replace(':', '')}.pickle-Datei konnte nicht gelöscht werden. Fehler: {e}")
-
                     return
                 else:
                     continue
@@ -461,13 +459,6 @@ class Monitoring(QMainWindow):
                     btn.setText("Start")
                     log("Logs/monitoring.log", "info", f"{typ.upper()}-Monitoring wurde beendet. Prozess-ID: {p}")
 
-                    try:
-                        os.remove(f"mon_{typ}.pickle")
-                        log("Logs/system.log", "info", f"mon_{typ}.pickle-Datei wurde gelöscht")
-
-                    except Exception as e:
-                        log("Logs/system.log", "error", f"mon_{typ}.pickle-Datei konnte nicht gelöscht werden. Fehler: {e}")
-
                     for mon in self.monitoring:
                         self.lw_processes.addItem(mon)
                     
@@ -515,109 +506,193 @@ class Monitoring(QMainWindow):
         
         self.current_user = self.pc_info["current_user"]
         self.hostname = self.pc_info["hostname"]
+        self.boot_time = datetime.datetime.fromtimestamp(psutil.boot_time()).strftime("%d.%m.%Y %H:%M:%S")
         self.ip = self.pc_info["ip_address"]
+        self.mac = ":".join(re.findall("..", "%x" % uuid.getnode()))
+        self.os = self.pc_info["os"]
+        self.os_version = platform.version()
+        self.processor = self.pc_info["processor"]
         self.cpu_p = self.pc_info["cpu_p"]
         self.cpu_l = self.pc_info["cpu_l"]
-        self.processor = self.pc_info["processor"]
-        self.os = self.pc_info["os"]
-        self.drives = self.pc_info["drives"]
         self.memory = self.pc_info["memory"]
-        self.mac = ":".join(re.findall("..", "%x" % uuid.getnode()))
+        self.drives = self.pc_info["drives"] 
 
+        self.computerinfo = {"timestamp": time.strftime('%d.%m.%y %H:%M:%S'),
+                             "current_user": self.current_user, 
+                             "hostname": self.hostname,
+                             "boottime": self.boot_time,
+                             "ip": self.ip,
+                             "os": self.os,
+                             "os_version": self.os_version,
+                             "processor": self.processor,
+                             "cpu_physical": self.cpu_p,
+                             "cpu_logical": self.cpu_l,
+                             "memory_GiB": self.memory,
+                             "drives": {}}
+        
+        for drive in self.drives:
+            self.computerinfo["drives"][drive] = {"total_GiB": get_disk_usage(drive)["total"],
+                                                  "used_GiB": get_disk_usage(drive)["used"],
+                                                  "free_GiB": get_disk_usage(drive)["free"]}
 
-
+        y = 15
+                        
         self.tab_computerinformation = QWidget()
         self.tabWidget.addTab(self.tab_computerinformation, "Computerinformationen")
 
         self.lb_user_description = QLabel(self.tab_computerinformation)
-        self.lb_user_description.setGeometry(QRect(15, 15, 200, 25))
+        self.lb_user_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_user_description.setText("Angemeldeter Benutzer")
 
         self.lb_user_value = QLabel(self.tab_computerinformation)
-        self.lb_user_value.setGeometry(QRect(200, 15, self.lb_x_value, 25))
+        self.lb_user_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
         self.lb_user_value.setText(self.current_user)
+        y += 25
 
 
         self.lb_hostname_description = QLabel(self.tab_computerinformation)
-        self.lb_hostname_description.setGeometry(QRect(15, 40, 200, 25))
+        self.lb_hostname_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_hostname_description.setText("Hostname")
 
         self.lb_hostname_value = QLabel(self.tab_computerinformation)
-        self.lb_hostname_value.setGeometry(QRect(200, 40, self.lb_x_value, 25))
+        self.lb_hostname_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
         self.lb_hostname_value.setText(self.hostname)
+        y += 25
 
 
-        self.lb_user_description = QLabel(self.tab_computerinformation)
-        self.lb_user_description.setGeometry(QRect(15, 65, 200, 25))
-        self.lb_user_description.setText("IP-Adresse")
+        self.lb_boot_time_description = QLabel(self.tab_computerinformation)
+        self.lb_boot_time_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
+        self.lb_boot_time_description.setText("Letzte Boottime")
 
-        self.lb_user_value = QLabel(self.tab_computerinformation)
-        self.lb_user_value.setGeometry(QRect(200, 65, self.lb_x_value, 25))
-        self.lb_user_value.setText(self.ip)
-
-
-        self.lb_count_physical_cores_description = QLabel(self.tab_computerinformation)
-        self.lb_count_physical_cores_description.setGeometry(QRect(15, 90, 200, 25))
-        self.lb_count_physical_cores_description.setText("Anzahl physischer Kerne")
-
-        self.lb_count_physical_cores_value = QLabel(self.tab_computerinformation)
-        self.lb_count_physical_cores_value.setGeometry(QRect(200, 90, self.lb_x_value, 25))
-        self.lb_count_physical_cores_value.setText(str(self.cpu_p))
+        self.lb_boot_time_value = QLabel(self.tab_computerinformation)
+        self.lb_boot_time_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
+        self.lb_boot_time_value.setText(self.boot_time)
+        y += 25
 
 
-        self.lb_count_logical_cores_description = QLabel(self.tab_computerinformation)
-        self.lb_count_logical_cores_description.setGeometry(QRect(15, 115, 200, 25))
-        self.lb_count_logical_cores_description.setText("Anzahl logischer Kerne")
+        self.lb_ip_description = QLabel(self.tab_computerinformation)
+        self.lb_ip_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
+        self.lb_ip_description.setText("IP-Adresse")
 
-        self.lb_count_logical_cores_value = QLabel(self.tab_computerinformation)
-        self.lb_count_logical_cores_value.setGeometry(QRect(200, 115, self.lb_x_value, 25))
-        self.lb_count_logical_cores_value.setText(str(self.cpu_l))
-        
+        self.lb_ip_value = QLabel(self.tab_computerinformation)
+        self.lb_ip_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
+        self.lb_ip_value.setText(self.ip)
+        y += 25
 
-        self.lb_processor_description = QLabel(self.tab_computerinformation)
-        self.lb_processor_description.setGeometry(QRect(15, 140, 200, 25))
-        self.lb_processor_description.setText("Verbauter Prozessor")
 
-        self.lb_processor_value = QLabel(self.tab_computerinformation)
-        self.lb_processor_value.setGeometry(QRect(200, 140, self.lb_x_value, 25))
-        self.lb_processor_value.setText(self.processor)
+        self.lb_mac_description = QLabel(self.tab_computerinformation)
+        self.lb_mac_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
+        self.lb_mac_description.setText("MAC-Adresse")
+
+        self.lb_mac_value = QLabel(self.tab_computerinformation)
+        self.lb_mac_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
+        self.lb_mac_value.setText(self.mac)
+        y += 25
 
 
         self.lb_os_description = QLabel(self.tab_computerinformation)
-        self.lb_os_description.setGeometry(QRect(15, 165, 200, 25))
+        self.lb_os_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_os_description.setText("Betriebssystem")
 
-
         self.lb_os_value = QLabel(self.tab_computerinformation)
-        self.lb_os_value.setGeometry(QRect(200, 165, self.lb_x_value, 25))
+        self.lb_os_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
         self.lb_os_value.setText(self.os)
+        y += 25
 
 
-        self.lb_drives_description = QLabel(self.tab_computerinformation)
-        self.lb_drives_description.setGeometry(QRect(15, 190, 200, 25))
-        self.lb_drives_description.setText("Laufwerke")
+        self.lb_os_version_description = QLabel(self.tab_computerinformation)
+        self.lb_os_version_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
+        self.lb_os_version_description.setText("Betriebssystem Release Version")
 
-        self.lb_drives_value = QLabel(self.tab_computerinformation)
-        self.lb_drives_value.setGeometry(QRect(200, 190, self.lb_x_value, 25))
-        self.lb_drives_value.setText(", ".join(self.drives))
+        self.lb_os_version_value = QLabel(self.tab_computerinformation)
+        self.lb_os_version_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
+        self.lb_os_version_value.setText(self.os_version)
+        y += 25
+
+
+        self.lb_processor_description = QLabel(self.tab_computerinformation)
+        self.lb_processor_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
+        self.lb_processor_description.setText("Verbauter Prozessor")
+
+        self.lb_processor_value = QLabel(self.tab_computerinformation)
+        self.lb_processor_value.setGeometry(QRect(200, y, self.lb_x_default+100, self.lb_y_default))
+        self.lb_processor_value.setText(self.processor)
+        y += 25
+
+
+        self.lb_count_physical_cores_description = QLabel(self.tab_computerinformation)
+        self.lb_count_physical_cores_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
+        self.lb_count_physical_cores_description.setText("Anzahl physischer Kerne")
+
+        self.lb_count_physical_cores_value = QLabel(self.tab_computerinformation)
+        self.lb_count_physical_cores_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
+        self.lb_count_physical_cores_value.setText(str(self.cpu_p))
+        y += 25
+
+
+        self.lb_count_logical_cores_description = QLabel(self.tab_computerinformation)
+        self.lb_count_logical_cores_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
+        self.lb_count_logical_cores_description.setText("Anzahl logischer Kerne")
+
+        self.lb_count_logical_cores_value = QLabel(self.tab_computerinformation)
+        self.lb_count_logical_cores_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
+        self.lb_count_logical_cores_value.setText(str(self.cpu_l))
+        y += 25
 
 
         self.lb_ram_description = QLabel(self.tab_computerinformation)
-        self.lb_ram_description.setGeometry(QRect(15, 215, 200, 25))
+        self.lb_ram_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_ram_description.setText("Verbauter Arbeitsspeicher")
 
         self.lb_ram_value = QLabel(self.tab_computerinformation)
-        self.lb_ram_value.setGeometry(QRect(200, 215, self.lb_x_value, 25))
+        self.lb_ram_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
         self.lb_ram_value.setText(str(self.memory) + " GiB")
+        y += 25
 
+
+        self.lb_drives_description = QLabel(self.tab_computerinformation)
+        self.lb_drives_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
+        self.lb_drives_description.setText("Laufwerke")
+
+        self.lb_drives_value = QLabel(self.tab_computerinformation)
+        self.lb_drives_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
+        self.lb_drives_value.setText(", ".join(self.drives))
+        y += 25
+
+        
+        self.lb_info_saved = QLabel(self.tab_computerinformation)
+        self.lb_info_saved.setGeometry(QRect(15, self.height-100, self.width, self.lb_y_default))
+        self.lb_info_saved.setStyleSheet("color: green")
 
         self.btn_save_xml = QPushButton(self.tab_computerinformation)
-        self.btn_save_xml.setGeometry(QRect(15, 450, 130, 25))
+        self.btn_save_xml.setGeometry(QRect(15, self.height-75, 130, self.lb_y_default))
         self.btn_save_xml.setText("XML-Datei speichern")
 
         self.btn_save_json = QPushButton(self.tab_computerinformation)
-        self.btn_save_json.setGeometry(QRect(150, 450, 130, 25))
+        self.btn_save_json.setGeometry(QRect(150, self.height-75, 130, self.lb_y_default))
         self.btn_save_json.setText("JSON-Datei speichern")
+
+
+        self.btn_save_xml.clicked.connect(self.save_xml)
+        self.btn_save_json.clicked.connect(self.save_json)
+
+    def save_xml(self):
+        data = QFileDialog.getSaveFileName(self, "Speichern", "", "XML (*.xml)")
+
+        xml = dicttoxml.dicttoxml(self.computerinfo)
+        dom = parseString(xml)
+
+        with open(data[0], "w") as x:
+            x.write(dom.toprettyxml())
+            
+
+    def save_json(self):
+        data = QFileDialog.getSaveFileName(self, "Speichern", "", "JSON (*.json)")
+
+        with open(data[0], "w") as j:
+            json.dump(self.computerinfo, j, indent=4)
+
+        self.lb_info_saved.setText(f"Gespeichert unter {data[0]}")
 
     def initLogs(self):
         self.tab_logs = QWidget()
@@ -883,13 +958,13 @@ class Monitoring(QMainWindow):
                                              "hard": v["hard"]}
 
 
-            with open("running_config.ini", "w") as c:
+            with open("Temp/running_config.ini", "w") as c:
                 parser.write(c)
 
             self.lb_validate_login.setStyleSheet("color: green")
             self.lb_validate_login.setText("Laufende Konfiguration gespeichert")
             
-            log("Logs/system.log", "info", "running_config.ini wurde geschrieben")
+            log("Logs/system.log", "info", "Temp/running_config.ini wurde geschrieben")
 
 
             # read the config file and set the data to a dictionary 
@@ -904,7 +979,7 @@ class Monitoring(QMainWindow):
                                        "limits": {}}
 
                 parser = ConfigParser()
-                parser.read("running_config.ini")
+                parser.read("Temp/running_config.ini")
 
                 # Section "Access_to_mail"
                 self.current_config["username"] = parser["Access_to_mail"]["user"]
@@ -929,9 +1004,9 @@ class Monitoring(QMainWindow):
                         else:
                             self.current_config["limits"][limit[-2:]] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
 
-                log("Logs/system.log", "info", f"running_config.ini-Datei erfolgreich geparsed")
+                log("Logs/system.log", "info", f"Temp/running_config.ini-Datei erfolgreich geparsed")
             except Exception as e:
-                log("Logs/system.log", "error", f"running_config.ini-Datei konnte nicht erfolgreich geparsed werden. Fehler: {e}")
+                log("Logs/system.log", "error", f"Temp/running_config.ini-Datei konnte nicht erfolgreich geparsed werden. Fehler: {e}")
 
     def startup_config(self):
         """
@@ -941,7 +1016,7 @@ class Monitoring(QMainWindow):
 
         self.running_config()
         try:
-            shutil.copy("running_config.ini", "startup_config.ini")            
+            shutil.copy("Temp/running_config.ini", "startup_config.ini")            
             self.lb_validate_login.setStyleSheet("color: green")
             self.lb_validate_login.setText("Startup Konfiguration gespeichert")
             log("Logs/system.log", "info", "startup_config.ini erfolgreich erstellt")
@@ -1154,49 +1229,6 @@ class Monitoring(QMainWindow):
             self.lb_validate_login.setStyleSheet("color: red")
             self.lb_validate_login.setText(f"Folgender Fehler: {e}")
             log("Logs/system.log", "info", f"Mailkonto-Validierung - Folgender Fehler ist aufgetreten: {e} ")
-
-            
-    def initCurrentUtilization(self):
-        self.tab_current_utilization = QWidget()
-        self.tabWidget.addTab(self.tab_current_utilization, "Auslastungen")
-
-
-        self.lb_current_utilization_title = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_title.setGeometry(QRect(15, 10, self.lb_x_default, 40))
-        self.lb_current_utilization_title.setStyleSheet("font-size: 15px; font-weight: 600")
-        self.lb_current_utilization_title.setText("Aktuelle Auslastungen:")
-
-        self.lb_current_utilization_cpu_utilization_description = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_cpu_utilization_description.setGeometry(QRect(15, 40, self.lb_x_default, self.lb_y_default))
-        self.lb_current_utilization_cpu_utilization_description.setText("CPU:")
-        
-        self.lb_current_utilization_cpu_utilization_value = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_cpu_utilization_value.setGeometry(QRect(115, 40, 50, self.lb_y_default))
-
-
-        self.lb_current_utilization_ram_utilization_description = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_ram_utilization_description.setGeometry(QRect(15, 65, self.lb_x_default, self.lb_y_default))
-        self.lb_current_utilization_ram_utilization_description.setText("Arbeitsspeicher:")
-        
-        self.lb_current_utilization_ram_utilization_value = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_ram_utilization_value.setGeometry(QRect(115, 65, 50, self.lb_y_default))
-
-
-        self.lb_current_utilization_processes_utilization_description = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_processes_utilization_description.setGeometry(QRect(15, 90, self.lb_x_default, self.lb_y_default))
-        self.lb_current_utilization_processes_utilization_description.setText("Anzahl Prozesse:")
-        
-        self.lb_current_utilization_processes_utilization_value = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_processes_utilization_value.setGeometry(QRect(115, 90, 50, self.lb_y_default))
-
-
-        self.lb_current_utilization_system_time_utilization_description = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_system_time_utilization_description.setGeometry(QRect(15, 115, self.lb_x_default, self.lb_y_default))
-        self.lb_current_utilization_system_time_utilization_description.setText("Systemzeit:")
-        
-        self.lb_current_utilization_system_time_utilization_value = QLabel(self.tab_current_utilization)
-        self.lb_current_utilization_system_time_utilization_value.setGeometry(QRect(115, 115, 50, self.lb_y_default))
-        
         
     def initGraph(self):
         self.tab_graph = QWidget()
@@ -1209,77 +1241,134 @@ class Monitoring(QMainWindow):
 
         self.tab_graph_mon_cpu = QWidget()
         self.tab_graph_mon.addTab(self.tab_graph_mon_cpu, "CPU")
-        PlotCanvas(self.tab_graph_mon_cpu, width=8, height=4, pickle_file="mon_cpu.pickle").move(50, 50)
+        PlotCanvas(self.tab_graph_mon_cpu, width=10, height=4, pickle_file="Temp/cpu.pickle").move(0, 100)
+
 
         self.tab_graph_mon_ram = QWidget()
         self.tab_graph_mon.addTab(self.tab_graph_mon_ram, "Arbeitsspeicher")
-        PlotCanvas(self.tab_graph_mon_ram, width=8, height=4, pickle_file="mon_ram.pickle").move(50, 50)
-        
+        PlotCanvas(self.tab_graph_mon_ram, width=10, height=4, pickle_file="Temp/ram.pickle").move(0, 100)
+
 
         self.lb_graph_mon_title = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_title.setGeometry(QRect(self.width-210, 110, self.lb_x_default, 40))
+        self.lb_graph_mon_title.setGeometry(QRect(15, 10, self.lb_x_default, 40))
         self.lb_graph_mon_title.setStyleSheet("font-size: 15px; font-weight: 600")
         self.lb_graph_mon_title.setText("Aktuelle Auslastungen:")
 
+
+        y = 40
         self.lb_graph_mon_cpu_description = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_cpu_description.setGeometry(QRect(self.width-210, 140, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_cpu_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_graph_mon_cpu_description.setText("CPU:")
 
         self.lb_graph_mon_cpu_value = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_cpu_value.setGeometry(QRect(self.width-110, 140, 50, self.lb_y_default))
+        self.lb_graph_mon_cpu_value.setGeometry(QRect(115, y, 50, self.lb_y_default))
+        
+        self.lb_graph_mon_cpu_avg_description = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_cpu_avg_description.setGeometry(QRect(165, y, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_cpu_avg_description.setText("CPU-Durchschnitt Systemzeit:")
+
+        self.lb_graph_mon_cpu_avg_value = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_cpu_avg_value.setGeometry(QRect(365, y, 50, self.lb_y_default))
+        y += 25
 
 
         self.lb_graph_mon_ram_description = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_ram_description.setGeometry(QRect(self.width-210, 165, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_ram_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_graph_mon_ram_description.setText("Arbeitsspeicher:")
 
         self.lb_graph_mon_ram_value = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_ram_value.setGeometry(QRect(self.width-110, 165, 50, self.lb_y_default))
+        self.lb_graph_mon_ram_value.setGeometry(QRect(115, y, 50, self.lb_y_default))
+
+        self.lb_graph_mon_ram_avg_description = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_ram_avg_description.setGeometry(QRect(165, y, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_ram_avg_description.setText("Arbeitsspeicher-Durchschnitt Systemzeit:")
+
+        self.lb_graph_mon_ram_avg_value = QLabel(self.tab_graph_mon)
+        self.lb_graph_mon_ram_avg_value.setGeometry(QRect(365, y, 50, self.lb_y_default))
+        y += 25
 
 
         self.lb_graph_mon_processes_description = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_processes_description.setGeometry(QRect(self.width-210, 190, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_processes_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_graph_mon_processes_description.setText("Anzahl Prozesse:")
 
         self.lb_graph_mon_processes_value = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_processes_value.setGeometry(QRect(self.width-110, 190, 50, self.lb_y_default))
+        self.lb_graph_mon_processes_value.setGeometry(QRect(115, y, 50, self.lb_y_default))
+        y += 25
 
 
         self.lb_graph_mon_system_time_description = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_system_time_description.setGeometry(QRect(self.width-210, 215, self.lb_x_default, self.lb_y_default))
+        self.lb_graph_mon_system_time_description.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_graph_mon_system_time_description.setText("Systemzeit:")
 
         self.lb_graph_mon_system_time_value = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_system_time_value.setGeometry(QRect(self.width-110, 215, 50, self.lb_y_default))
-
+        self.lb_graph_mon_system_time_value.setGeometry(QRect(115, y, 50, self.lb_y_default))
+        y += 25
 
     def refresh_current_utilization(self):
-        cpu = str(psutil.cpu_percent()) + " %"
-        ram = str(round(get_virtual_memory()["percent"], 2)) + " %"
-        processes = str(len(psutil.pids()))
-        system_time = str(round(time.time() - self.start_system_time)) + " s"
+        cpu = psutil.cpu_percent()
+        ram = round(get_virtual_memory()["percent"], 2)
+        processes = len(psutil.pids())
+        system_time = round(time.time() - self.start_system_time)
 
-        self.lb_current_utilization_cpu_utilization_value.setText(cpu)
-        self.lb_current_utilization_ram_utilization_value.setText(ram)
-        self.lb_current_utilization_processes_utilization_value.setText(processes)
-        self.lb_current_utilization_system_time_utilization_value.setText(system_time)
 
-        self.lb_graph_mon_cpu_value.setText(cpu)
-        self.lb_graph_mon_ram_value.setText(ram)
-        self.lb_graph_mon_processes_value.setText(processes)
-        self.lb_graph_mon_system_time_value.setText(system_time)
+        self.cpu_values.append(cpu)
+        self.ram_values.append(ram)
+        self.systemtime_values.append(system_time)
+        
+        cpu_avg = round(sum(self.cpu_values)/len(self.cpu_values), 2)
+        ram_avg = round(sum(self.ram_values)/len(self.ram_values), 2)
 
-        """
-        GIT - Neuen Branch und versuchen, das Monitoring hier laufen zu lassen
-        """
+        with open("Temp/cpu.pickle", "wb") as p:
+            pickle.dump([self.systemtime_values, self.cpu_values], p)
+
+        with open("Temp/ram.pickle", "wb") as p:
+            pickle.dump([self.systemtime_values, self.ram_values], p)
+
+        self.lb_graph_mon_cpu_value.setText(str(cpu) + " %")
+        self.lb_graph_mon_ram_value.setText(str(ram) + " %")
+        self.lb_graph_mon_processes_value.setText(str(processes))
+        self.lb_graph_mon_system_time_value.setText(str(system_time) + " s")
+        self.lb_graph_mon_cpu_avg_value.setText(str(cpu_avg) + " %")
+        self.lb_graph_mon_ram_avg_value.setText(str(ram_avg) + " %")
+
+        
+        if "CPU" in self.monitoring:
+            soft = int(self.current_config["limits"]["cpu"]["soft"])
+            hard = int(self.current_config["limits"]["cpu"]["hard"])
+
+            if soft <= cpu < hard:
+                self.lb_graph_mon_cpu_avg_value.setStyleSheet("color: orange")
+            elif cpu >= hard:
+                self.lb_graph_mon_cpu_avg_value.setStyleSheet("color: red")
+            else:
+                self.lb_graph_mon_cpu_avg_value.setStyleSheet("color: green")
+        else:
+            self.lb_graph_mon_cpu_avg_value.setStyleSheet("color: black")
+
+        if "Arbeitsspeicher" in self.monitoring:
+            soft = int(self.current_config["limits"]["cpu"]["soft"])
+            hard = int(self.current_config["limits"]["cpu"]["hard"])
+
+            if soft <= ram < hard:
+                self.lb_graph_mon_ram_avg_value.setStyleSheet("color: orange")
+            elif ram >= hard:
+                self.lb_graph_mon_ram_avg_value.setStyleSheet("color: red")
+            else:
+                self.lb_graph_mon_ram_avg_value.setStyleSheet("color: green")
+        else:
+            self.lb_graph_mon_ram_avg_value.setStyleSheet("color: black")
+        
+        
 
         if self.current_timer % 10 == 0:
             self.lb_error.clear()
             self.lb_status.clear()
             self.lb_validate_login.clear()
-            self.lb_config_warnings.clear()
-                
+            self.lb_config_warnings.clear()        
+
         self.current_timer += 1
+
 
 
 class PlotCanvas(FigureCanvas):
@@ -1290,7 +1379,7 @@ class PlotCanvas(FigureCanvas):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axis = self.fig.add_subplot(1, 1, 1)
         self.axis.set_ylabel("Auslastung in %")
-        self.axis.get_xaxis().set_visible(False)
+        self.axis.set_xlabel("Zeit in s")
 
         self.axis.set_ylim(ymin=0, ymax=100)
 
@@ -1312,6 +1401,11 @@ class PlotCanvas(FigureCanvas):
 
                 y_mean = [sum(ys)/len(ys)] * len(ys)
 
+                while len(xs) > 60:
+                    del xs[0]
+                    del ys[0]
+                    del y_mean[0]
+
                 # Scaling is in int, not float
                 self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
                 self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -1319,11 +1413,12 @@ class PlotCanvas(FigureCanvas):
                 self.axis.clear()
                 self.axis.set_ylim(ymin=0, ymax=100)
 
-                self.axis.get_xaxis().set_visible(False)
+                #self.axis.get_xaxis().set_visible(False)
 
                 self.axis.set_ylabel("Auslastung in %")
-                self.axis.plot(xs, ys, label=f"Auslastung")
-                self.axis.plot(xs, y_mean, label="Average Auslastung", linestyle="--")
+                self.axis.set_xlabel("Zeit in s")
+                self.axis.plot(xs, ys, label=f"Auslastung letzte 60 s")
+                self.axis.plot(xs, y_mean, label="Durchschnitt Auslastung letzte 60 s", linestyle="--")
 
                 self.axis.legend(loc='upper left')
             except Exception as e:
@@ -1335,11 +1430,13 @@ class PlotCanvas(FigureCanvas):
             # Scaling is in int, not float
             self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
             self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
-            self.axis.set_ylabel("Auslastung in %")
             self.axis.set_ylim(ymin=0, ymax=100)
             
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = Monitoring()
-    sys.exit(app.exec_())
+    if platform.system() == "Windows":
+        app = QApplication(sys.argv)
+        window = Monitoring()
+        sys.exit(app.exec_())
+    else:
+        print("Läuft nur auf Windows")
