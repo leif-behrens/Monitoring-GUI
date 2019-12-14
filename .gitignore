@@ -10,4 +10,4 @@ bla.py
 startup_config.ini
 /Graph Test
 /.vscode
-Logs/*
+/Logs
