@@ -552,3 +552,8 @@
 2019-12-14 17:25:44,575	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
 2019-12-14 17:25:44,585	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
 2019-12-14 17:25:44,592	INFO	lbehrens	Programm nach 12.91 Sekunden beendet
+2019-12-14 17:36:19,139	INFO	lbehrens	Programm gestartet
+2019-12-14 17:36:20,692	INFO	lbehrens	Temp/running_config.ini-Datei wurde gelöscht
+2019-12-14 17:36:20,702	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
+2019-12-14 17:36:20,711	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
+2019-12-14 17:36:20,719	INFO	lbehrens	Programm nach 1.59 Sekunden beendet
