@@ -73,6 +73,6 @@ Das Monitoring hat unterschiedliche Funktionen, bestehend aus 5 Tabs.
 - Die Systemzeit, wie lange das Programm bereits läuft wird angezeigt
 
 #### Created by Leif Behrens
-Bei Fragen oder Verbesserungsvorschläge:
+Bei Fragen oder Verbesserungsvorschlägen:
 
 Mailto: [Leif Behrens](mailto:info@leifbehrens.de?subject=[GitHub]%20Monitoring)
