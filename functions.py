@@ -19,14 +19,6 @@ from configparser import ConfigParser
 import pickle
 
 
-class ValueTooHighOrTooLowException(Exception):
-    pass
-
-
-class ValueGreaterThanOtherValueException(Exception):
-    pass
-
-
 def get_disk_usage(path):
     """
     :param path: Path of the disk
@@ -395,78 +387,6 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
     except Exception as e:
         log("Logs/system.log", "error", f"Arbeitsspeicher-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
 
-
-def show_hardware_information():
-    """
-    Printed Hardwareinformationen
-    :return: Dictionary
-    """
-
-    sys_info = get_pc_information()
-    cpu = psutil.cpu_percent(interval=1)
-    memory = get_virtual_memory()
-    timestamp = time.strftime("%d.%m.%y %H:%M:%S")
-
-    data = {"timestamp": timestamp,
-            "cpu": 0,
-            "memory": {"total": 0.0,
-                       "available": 0.0,
-                       "percent": 0.0,
-                       "used": 0.0,
-                       "free": 0.0},
-            "disk": [],
-            "processes": len(psutil.pids())
-            }
-    cls()
-
-    print("Aktuelle Auslastungen:")
-    print("Timestamp:", timestamp)
-    print()
-    print()
-
-    print("CPU-Auslastung:", cpu, "%")
-    data["cpu"] = cpu
-    print()
-
-    print("Anzahl laufender Prozesse:", len(psutil.pids()))
-    print()
-
-    print("Arbeitsspeichernutzung:")
-    print("\tGesamt:                ", memory["total"], "GiB")
-    print("\tVerfügbar:             ", memory["free"], "GiB")
-    print("\tAbsolut genutzt:       ", memory["used"], "GiB")
-    print("\tProzentual genutzt:    ", memory["percent"], "%")
-    print()
-
-    data["memory"]["total"] = memory["total"]
-    data["memory"]["free"] = memory["free"]
-    data["memory"]["used"] = memory["used"]
-    data["memory"]["percent"] = memory["percent"]
-
-    print("Festplattennutzung:")
-    for drive in sys_info["drives"]:
-        # Falls ein Netzlaufwerk eingebunden ist und das nicht erreichbar ist
-        try:
-            print("\tLaufwerk:              ", drive[0])
-            print("\tGesamt:                ", get_disk_usage(drive)["total"], "GiB")
-            print("\tVerfügbar:             ", get_disk_usage(drive)["free"], "GiB")
-            print("\tAbsolut genutzt:       ", get_disk_usage(drive)["used"], "GiB")
-            print("\tProzentual genutzt:    ", get_disk_usage(drive)["percent"], "%")
-            print()
-
-            data["disk"].append({"drive": drive[0],
-                                 "total": get_disk_usage(drive)["total"],
-                                 "free": get_disk_usage(drive)["free"],
-                                 "used": get_disk_usage(drive)["used"],
-                                 "percent": get_disk_usage(drive)["percent"]
-                                 })
-        except Exception as e:
-            print(e)
-            input("Drücke Enter um fortzufahren.")
-
-        print()
-
-    return data
 
 
 if __name__ == '__main__':
