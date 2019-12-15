@@ -1,156 +1,21 @@
-import psutil
 import os
 import smtplib
-from email.mime.application import MIMEApplication
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.utils import COMMASPACE
 import platform
-import getpass
+import psutil
 import socket
 import logging
 import time
-import win32api
-import ctypes
-import winsound
 import json
 import base64
 from configparser import ConfigParser
 import pickle
+import getpass
 
-
-def get_disk_usage(path):
-    """
-    :param path: Path of the disk
-    :return: Dictionary -> rounded elements in GiB except percentage
-    """
-
-    disk_usage = psutil.disk_usage(path)
-    total = round((disk_usage.total / 2 ** 30), 2)
-    used = round((disk_usage.used / 2 ** 30), 2)
-    free = round((disk_usage.free / 2 ** 30), 2)
-    percent = disk_usage.percent
-
-    return {"total": total, "used": used, "free": free, "percent": percent}
-
-
-def get_virtual_memory():
-    """
-    :return: Dictionary -> rounded elements in GiB except percentage
-    """
-
-    total = round((psutil.virtual_memory().total / 2 ** 30), 2)
-    available = round((psutil.virtual_memory().available / 2 ** 30), 2)
-    percent = psutil.virtual_memory().percent
-    used = round((psutil.virtual_memory().used / 2 ** 30), 2)
-    free = round((psutil.virtual_memory().free / 2 ** 30), 2)
-
-    return {"total": total, "available": available, "percent": percent, "used": used, "free": free}
-
-
-def get_pc_information():
-    """
-    :return: Dictionary with pc-information
-    """
-
-    current_user = getpass.getuser()  # Aktuell angemeldeter User
-    hostname = socket.gethostname()  # Hostname dieses Rechners
-    ip_address = socket.gethostbyname(hostname)  # IP-Adresse des Rechners
-    cpu_cores_physical = psutil.cpu_count(logical=False)  # Anzahl physischer CPU-Kerne
-    cpu_cores_logical = psutil.cpu_count()  # Anzahl logischer CPU-Kerne
-    processor = platform.processor()  # Verbauter Prozessor
-    operating_system = platform.system() + " " + platform.release()  # Betriebssystem mit Version --> Windows 10
-    drives = [drive.replace("\\", "") for drive in
-              win32api.GetLogicalDriveStrings().split("\000")[:-1]]  # Alle Laufwerke
-    memory = get_virtual_memory()["total"]  # Verbauter Arbeitsspeicher
-
-    return {"current_user": current_user, "hostname": hostname, "ip_address": ip_address, "cpu_p": cpu_cores_physical,
-            "cpu_l": cpu_cores_logical, "processor": processor, "os": operating_system, "drives": drives,
-            "memory": memory}
-
-
-def sendmail(receiver, sender, message, subject, username, password, smtp_server, attachment=None, port=587):
-    """
-    :param sender: String
-    :param receiver: List with all receivers of the mail
-    :param message: (Doc)string
-    :param attachment: list with the locations (paths) of the files
-    :param smtp_server: String
-    :param username: String
-    :param password: String
-    :param port: Integer -> Port of server -> Default 587
-    :param subject: String
-    :return: None
-    """
-
-    # Mime-Objekt wird erstellt
-    msg = MIMEMultipart()
-    msg["From"] = sender
-    msg["To"] = COMMASPACE.join(receiver)
-    msg["Subject"] = subject
-    msg.attach(MIMEText(message))
-
-    # Falls dem Parameter ein Argument übergeben wurde, wird versucht den Anhang an das Mime-Objekt anzuhängen
-    if attachment:
-        for attach in attachment:
-            try:
-                with open(attach, "rb") as file:
-                    part = MIMEApplication(file.read(), Name=os.path.basename(attach))
-                part["Content-Disposition"] = "attachment; filename='%s'" % os.path.basename(attach)
-                msg.attach(part)
-            except Exception as e:
-                if len(attachment) > 1:
-                    print("Konnte die Dateien nicht anhängen. Fehler: {}".format(e))
-                else:
-                    print("Konnte die Datei nicht anhängen. Fehler: {}".format(e))
-
-    try:
-        # Objekt der Klasse smtplib.SMTP wird erstellt
-        mailserver = smtplib.SMTP(smtp_server, port)
-
-        # Am Mailserver identifizieren
-        mailserver.ehlo()
-
-        # Verschlüsselung starten
-        mailserver.starttls()
-
-        # Erneut am Mailserver identifizieren
-        mailserver.ehlo()
-
-        # Anmelden mit Kontodaten
-        mailserver.login(username, password)
-
-        # Mail wird versendet
-        mailserver.sendmail(sender, receiver, msg.as_string())
-
-        # Verbindung wird getrennt
-        mailserver.close()
-
-        return True
-
-    # Unterschiedliche smtplib-Errors werden abgefangen
-    except smtplib.SMTPAuthenticationError:
-        print("Credentials sind nicht korrekt")
-        return False
-    except smtplib.SMTPConnectError:
-        print("SMTP-Server konnte nicht erreicht werden. Überprüfen Sie Ihre Internetverbindung oder den angegebenen "
-              "Server.")
-        return False
-    except smtplib.SMTPDataError:
-        print("DataError.")
-        return False
-    except smtplib.SMTPHeloError:
-        print("Helo Error.")
-        return False
-    except smtplib.SMTPNotSupportedError:
-        print("Not Supported.")
-        return False
-    except smtplib.SMTPRecipientsRefused:
-        print(f"Mailadresse '{receiver[0]}' konnte nicht erreicht werden.")
-        return False
-    except Exception as e:
-        print(e)
-        return False
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import COMMASPACE
+import win32api
 
 
 def log(file, logtype, msg):
@@ -197,7 +62,132 @@ def log(file, logtype, msg):
     
     del logger.handlers[:]
     return
-    
+
+def get_disk_usage(path):
+    """
+    :param path: Path of the disk
+    :return: Dictionary -> rounded elements in GiB except percentage
+    """
+
+    disk_usage = psutil.disk_usage(path)
+    total = round((disk_usage.total / 2 ** 30), 2)
+    used = round((disk_usage.used / 2 ** 30), 2)
+    free = round((disk_usage.free / 2 ** 30), 2)
+    percent = disk_usage.percent
+
+    return {"total": total, "used": used, "free": free, "percent": percent}
+
+def get_virtual_memory():
+    """
+    :return: Dictionary -> rounded elements in GiB except percentage
+    """
+
+    total = round((psutil.virtual_memory().total / 2 ** 30), 2)
+    available = round((psutil.virtual_memory().available / 2 ** 30), 2)
+    percent = psutil.virtual_memory().percent
+    used = round((psutil.virtual_memory().used / 2 ** 30), 2)
+    free = round((psutil.virtual_memory().free / 2 ** 30), 2)
+
+    return {"total": total, "available": available, "percent": percent, "used": used, "free": free}
+
+def get_pc_information():
+    """
+    :return: Dictionary with pc-information
+    """
+
+    current_user = getpass.getuser()  # Aktuell angemeldeter User
+    hostname = socket.gethostname()  # Hostname dieses Rechners
+    ip_address = socket.gethostbyname(hostname)  # IP-Adresse des Rechners
+    cpu_cores_physical = psutil.cpu_count(logical=False)  # Anzahl physischer CPU-Kerne
+    cpu_cores_logical = psutil.cpu_count()  # Anzahl logischer CPU-Kerne
+    processor = platform.processor()  # Verbauter Prozessor
+    operating_system = platform.system() + " " + platform.release()  # Betriebssystem mit Version --> Windows 10
+    drives = [drive.replace("\\", "") for drive in
+              win32api.GetLogicalDriveStrings().split("\000")[:-1]]  # Alle Laufwerke
+    memory = get_virtual_memory()["total"]  # Verbauter Arbeitsspeicher
+
+    return {"current_user": current_user, "hostname": hostname, "ip_address": ip_address, "cpu_p": cpu_cores_physical,
+            "cpu_l": cpu_cores_logical, "processor": processor, "os": operating_system, "drives": drives,
+            "memory": memory}
+
+def sendmail(receiver, sender, message, subject, username, password, smtp_server, attachment=None, port=587):
+    """
+    :param sender: String
+    :param receiver: List with all receivers of the mail
+    :param message: (Doc)string
+    :param attachment: list with the locations (paths) of the files
+    :param smtp_server: String
+    :param username: String
+    :param password: String
+    :param port: Integer -> Port of server -> Default 587
+    :param subject: String
+    :return: None
+    """
+
+    # Mime-Objekt wird erstellt
+    msg = MIMEMultipart()
+    msg["From"] = sender
+    msg["To"] = COMMASPACE.join(receiver)
+    msg["Subject"] = subject
+    msg.attach(MIMEText(message))
+
+    # Falls dem Parameter ein Argument übergeben wurde, wird versucht den Anhang an das Mime-Objekt anzuhängen
+    if attachment:
+        for attach in attachment:
+            try:
+                with open(attach, "rb") as file:
+                    part = MIMEApplication(file.read(), Name=os.path.basename(attach))
+                part["Content-Disposition"] = "attachment; filename='%s'" % os.path.basename(attach)
+                msg.attach(part)
+            except Exception as e:
+                log("Logs/system.log", "error", f"Mailversand - Datei {attach} konnte nicht angehängt werden. Fehler: {e}")
+
+    try:
+        # Objekt der Klasse smtplib.SMTP wird erstellt
+        mailserver = smtplib.SMTP(smtp_server, port)
+
+        # Am Mailserver identifizieren
+        mailserver.ehlo()
+
+        # Verschlüsselung starten
+        mailserver.starttls()
+
+        # Erneut am Mailserver identifizieren
+        mailserver.ehlo()
+
+        # Anmelden mit Kontodaten
+        mailserver.login(username, password)
+
+        # Mail wird versendet
+        mailserver.sendmail(sender, receiver, msg.as_string())
+
+        # Verbindung wird getrennt
+        mailserver.close()
+
+        return True
+
+    # Unterschiedliche smtplib-Errors werden abgefangen
+    except smtplib.SMTPAuthenticationError as e:
+        log("Logs/system.log", "error", f"Mail - ungültige Zugangsdaten. Fehler: {e}")
+        return False
+    except smtplib.SMTPConnectError as e:
+        log("Logs/system.log", "error", f"Mail - Connectionerror. Fehler: {e}")
+        return False
+    except smtplib.SMTPDataError as e:
+        log("Logs/system.log", "error", f"Mail - Dataerror. Fehler: {e}")
+        return False
+    except smtplib.SMTPHeloError as e:
+        log("Logs/system.log", "error", f"Mail - Heloerror. Fehler: {e}")
+        return False
+    except smtplib.SMTPNotSupportedError as e:
+        log("Logs/system.log", "error", f"Mail - Not supported-error. Fehler: {e}")
+        return False
+    except smtplib.SMTPRecipientsRefused as e:
+        log("Logs/system.log", "error", f"Mail - Empfänger refused. Fehler: {e}")
+        return False
+    except Exception as e:
+        log("Logs/system.log", "error", f"Mailversand. Fehler: {e}")
+        return False
 
 
 def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
@@ -272,7 +262,6 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
 
     except Exception as e:
         log("Logs/system.log", "error", f"Laufwerk {disk.replace(':', '')}-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
-        
 
 def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
     try:
@@ -330,7 +319,6 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
     except Exception as e:
         log("Logs/system.log", "error", f"CPU-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
 
-
 def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
     try:
         name = f"Arbeitsspeichernutzung"
@@ -344,7 +332,7 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                 logtype = "warning"
                 log_msg = f"{name} >= {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
-                log(name, f, logtype, log_msg)
+                log(f, logtype, log_msg)
 
                 start = time.time()
                 
@@ -386,7 +374,6 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
 
     except Exception as e:
         log("Logs/system.log", "error", f"Arbeitsspeicher-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
-
 
 
 if __name__ == '__main__':
