@@ -99,3 +99,30 @@
 2019-12-17 09:30:36,576	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
 2019-12-17 09:30:36,595	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
 2019-12-17 09:30:36,597	INFO	lbehrens	Programm nach 197.83 Sekunden beendet
+2019-12-17 09:56:37,918	INFO	lbehrens	Programm gestartet
+2019-12-17 09:56:43,652	INFO	lbehrens	Temp/running_config.ini-Datei wurde gelöscht
+2019-12-17 09:56:43,661	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
+2019-12-17 09:56:43,676	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
+2019-12-17 09:56:43,692	INFO	lbehrens	Programm nach 5.78 Sekunden beendet
+2019-12-17 09:57:55,791	INFO	lbehrens	Programm gestartet
+2019-12-17 09:57:57,523	INFO	lbehrens	Temp/running_config.ini-Datei wurde gelöscht
+2019-12-17 09:57:57,531	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
+2019-12-17 09:57:57,550	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
+2019-12-17 09:57:57,566	INFO	lbehrens	Programm nach 1.78 Sekunden beendet
+2019-12-17 10:22:21,324	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-c', 'qiwuod']
+2019-12-17 10:22:38,553	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-c', 'qiwuod']
+2019-12-17 10:23:03,414	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-c', 'qiwuod', '-m', 'qwd']
+2019-12-17 10:23:58,203	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-c', 'qiwuod', '-m', 'qwd']
+2019-12-17 10:24:09,503	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-c', 'qiwuod', '-m', 'qwd', 'qwed', 'qwd', 'qwd', 'qwde', 'qwd', 'qdq']
+2019-12-17 10:24:39,623	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-m', 'qwd', 'qwed', 'qwd', 'qwd', 'qwde', 'qwd', 'qdq']
+2019-12-17 10:26:09,869	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['-h']
+2019-12-17 10:26:44,141	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['-h']
+2019-12-17 10:27:00,664	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['-h']
+2019-12-17 10:32:10,800	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['-h']
+2019-12-17 10:32:35,877	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['-h']
+2019-12-17 10:32:59,678	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['-h']
+2019-12-17 10:34:57,772	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-c', 'dq']
+2019-12-17 10:35:21,452	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-c']
+2019-12-17 10:35:25,441	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-c', 'dsa']
+2019-12-17 10:36:48,231	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-m', 'qw', 'w', 'q', 'q', 'q', 'q', 'q']
+2019-12-17 10:36:52,078	INFO	lbehrens	Main.py wurde mit folgenden Kommandozeilenparametern geöffnet: ['start', 'cpu', '-m', 'qw', 'w', 'q', 'q', 'q', 'q']

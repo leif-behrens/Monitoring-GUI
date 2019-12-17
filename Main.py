@@ -11,6 +11,9 @@ import uuid
 import re
 import datetime
 from xml.dom.minidom import parseString
+import argparse
+import textwrap
+import subprocess
 
 # 3rd party libraries
 from PyQt5 import QtGui
@@ -1422,9 +1425,112 @@ class PlotCanvas(FigureCanvas):
             
 
 if __name__ == "__main__":
-    if platform.system() == "Windows":
-        app = QApplication(sys.argv)
-        window = Monitoring()
-        sys.exit(app.exec_())
+    if len(sys.argv) > 1:
+        log("Logs/system.log", "info", f"{sys.argv[0]} wurde mit folgenden Kommandozeilenparametern geöffnet: {sys.argv[1::]}")
+
+        parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, 
+                                        description=textwrap.dedent("""\
+        Monitoring via Kommandozeile\n
+
+        Bsp.:
+        Um das Monitoring für die CPU zu starten, mit Softlimit 70 und Hardlimit 80:
+        python Main.py start cpu -S 70 -H 80 -r <Email-Empfänger> -U <Email-User> -P <Passwort> -s <SMTP-Server> -p <Port>
+        
+        Das Passwort muss ggf. in Anführungszeichen angegeben werden, falls im Kennwort ein kaufmännischen Und (&) enthalten ist!
+        
+        Um das Monitoring für den Arbeitsspeicher zu starten und eine Konfigurationsdatei vorhanden ist:
+        python Main.py start ram -C <Konfigurationsdatei>
+        
+
+        Um das aktuell laufende cpu Monitoring zu beenden:
+        python Main.py stop cpu
+        """))
+
+        mon = ["cpu", "ram"]
+        for drive in get_pc_information()["drives"]:
+            mon.append(drive.replace(":", "").lower())
+        
+        parser.add_argument("startstop", metavar="start, stop", help="Starten (start) oder stoppen (stop) eines Monitorings", choices=["start", "stop"])
+        parser.add_argument("monitoring", metavar=", ".join(mon), help="Typ des Monitoring", choices=mon)
+
+        parser.add_argument("-a", metavar="", action="store_true", dest="attachment", help="Attachment als Anhang senden")
+
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument("-c", "--config", metavar="", action="store", dest="config", help="Relativen oder absoluten Pfad einer Konfigurationsdatei")
+        group.add_argument("-m", "--manual", metavar="", action="store", dest="commands", nargs=7,
+                           help="int: <Softlimit>, int: <Hardlimit>, str: <Mailempfänger>, str: <Mailuser>, str: <Mailpassword>, str: <SMTP-Server>, int: <Port>")
+        
+        args = parser.parse_args()
+
+        if args.startstop == "start" and args.config:
+            try:
+                conf = ConfigParser()
+                conf.read(args.config)
+
+                # Section "Access_to_mail"
+                user = conf["Access_to_mail"]["user"]
+                password = base64.b64decode(conf["Access_to_mail"]["password"]).decode("utf-8")
+                server = conf["Access_to_mail"]["server"]
+                port = int(conf["Access_to_mail"]["port"])
+
+                # Section "DEFAULT"
+                mail_addresses = (conf["DEFAULT"]["mailadressen"]).split(";")
+                attachment = conf["DEFAULT"]["attach_logs"]
+                
+                if args.monitoring == "cpu":
+                    soft = int(conf["limits_cpu"]["soft"])
+                    hard = int(conf["limits_cpu"]["hard"])
+
+                elif args.monitoring == "ram":
+                    soft = int(conf["limits_ram"]["soft"])
+                    hard = int(conf["limits_ram"]["hard"])
+                
+                elif args.monitoring in mon:
+                    monitoring = args.monitoring
+                    soft = int(conf[f"limits_{monitoring.upper()}:"]["soft"])
+                    hard = int(conf[f"limits_{monitoring.upper()}:"]["hard"])
+
+                try:
+                    conn = smtplib.SMTP(server, port)
+                    conn.ehlo()
+                    conn.starttls()
+                    conn.ehlo()
+                    conn.login(user, password)
+                    conn.quit()
+
+                    if os.path.isfile("Temp/processes.pickle"):
+                        with open("Temp/processes.pickle", "rb") as p:
+                            processes = pickle.load(p)
+                        
+                        for process, pid in processes.items():
+                            if process == args.monitoring:
+                                print(f"{args.monitoring}-Monitoring läuft bereits unter der Prozess-ID {pid}")
+                                sys.exit()
+                    
+                    subprocess.Popen(f"")
+
+
+                except Exception as e:
+                    log("Logs/system.log", "error", f"Validierung am SMTP-Server war nicht möglich. Fehler: {e}")
+                    print(f"Validierung am SMTP-Server war nicht möglich. Fehler: {e}")
+
+            except Exception as e:
+                log("Logs/system.log", "error", f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e}")
+                print(f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e}")
+                sys.exit()
+        
+        if args.startstop == "start" and args.commands:
+            if args.attachment:
+                attachment = "True"
+            else:
+                attachment = "False"
+            print("start+manual")
+
     else:
-        print("Läuft nur auf Windows")
+    
+        if platform.system() == "Windows":
+            app = QApplication(sys.argv)
+            window = Monitoring()
+            sys.exit(app.exec_())
+        else:
+            print("Läuft nur auf Windows")

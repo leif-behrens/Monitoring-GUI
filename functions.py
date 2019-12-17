@@ -10,6 +10,8 @@ import base64
 from configparser import ConfigParser
 import pickle
 import getpass
+import argparse
+import sys
 
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -208,6 +210,17 @@ def mon_disk(disk, mail_addresses, attachment, soft, hard, user, password, serve
 
     # While-Schleife, die permanent überprüft, ob ein Limit überschritten ist. Nach jedem Schleifendurchlauf "schläft"
     # der Prozess in der Mainfunction für eine Sekunde.
+    if len(sys.argv) > 1:
+        if os.path.isfile("Temp/processes.pickle"):
+            with open("Temp/processes.pickle", "rb") as p:
+                processes = pickle.load(p)
+        else:
+            processes = {}
+        
+        processes[disk.replace(":", "").lower()] = os.getpid()
+        with open("Temp/processes.pickle", "wb") as p:
+            pickle.dump(processes, p)
+
     try:
         name = f"Laufwerk {disk}-Auslastung"
         f = "Logs/limits.log"
@@ -359,4 +372,40 @@ def mon_memory(mail_addresses, attachment, soft, hard, user, password, server, s
 
 
 if __name__ == '__main__':
-    pass
+
+    parser = argparse.ArgumentParser()
+
+    mon = ["cpu", "ram"]
+    for drive in get_pc_information()["drives"]:
+        mon.append(drive.replace(":", "").lower())
+
+    parser.add_argument("startstop", metavar="start, stop", help="Starten (start) oder stoppen (stop) eines Monitorings", choices=["start", "stop"])
+    parser.add_argument("monitoring", metavar=", ".join(mon), help="Typ des Monitoring", choices=mon)
+
+    parser.add_argument("-a", metavar="", action="store_true", dest="attachment", help="Attachment als Anhang senden")
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-c", "--config", metavar="", action="store", dest="config", help="Relativen oder absoluten Pfad einer Konfigurationsdatei")
+    group.add_argument("-m", "--manual", metavar="", action="store", dest="commands", nargs=7,
+                        help="int: <Softlimit>, int: <Hardlimit>, str: <Mailempfänger>, str: <Mailuser>, str: <Mailpassword>, str: <SMTP-Server>, int: <Port>")
+
+
+    args = parser.parse_args()
+
+    if args.attachment:
+        attachment = True
+    else:
+        attachment = False
+
+    if args.monitoring == "cpu" and args.startstop == "start":
+        log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
+        mon_cpu([args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
+
+
+    elif args.monitoring == "ram" and args.startstop == "start":
+        log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
+        mon_memory([args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
+
+    elif args.monitoring in mon and args.startstop == "start":
+        log("Logs/monitoring.log", "info", f"{args.monitoring.upper()}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
+        mon_disk(f"{args.monitoring.upper()}:", [args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
