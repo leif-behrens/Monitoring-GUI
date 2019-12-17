@@ -1,0 +1,4 @@
+2019-12-17 09:26:50,079	CRITICAL	lbehrens	Laufwerk B:-Auslastung >= 15 % | Aktuelle Auslastung: 1523.84 GiB/2794.5 GiB = 54.5 %
+2019-12-17 09:27:22,267	CRITICAL	lbehrens	Laufwerk B:-Auslastung >= 15 % | Aktuelle Auslastung: 1523.84 GiB/2794.5 GiB = 54.5 %
+2019-12-17 09:28:03,504	CRITICAL	lbehrens	Laufwerk B:-Auslastung >= 15 % | Aktuelle Auslastung: 1523.84 GiB/2794.5 GiB = 54.5 %
+2019-12-17 09:30:13,274	CRITICAL	lbehrens	CPU-Auslastung >= 82 % | Aktuelle Auslastung: 84.0 %

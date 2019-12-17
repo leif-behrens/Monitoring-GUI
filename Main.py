@@ -1,4 +1,4 @@
-# Python standard librariess
+# Python standard libraries
 import sys
 import multiprocessing
 import json
@@ -87,7 +87,6 @@ class Monitoring(QMainWindow):
                                        "password": "",
                                        "server": "",
                                        "port": "",
-                                       "logs_path": "",
                                        "mail_receiver": [],
                                        "attachment": None,
                                        "limits": {}}
@@ -117,13 +116,11 @@ class Monitoring(QMainWindow):
 
 
                 # Section "DEFAULT"
-                self.current_config["logs_path"] = parser["DEFAULT"]["pfad_logs"]
                 mail_addresses = (parser["DEFAULT"]["mailadressen"]).split(";")
                 for mail in mail_addresses:
                     self.current_config["mail_receiver"].append(mail)
                 self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
                 
-                self.le_logs_destination_value.setText(self.current_config["logs_path"])
                 self.le_mail_receiver.setText((";").join(self.current_config["mail_receiver"]))
 
                 self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
@@ -301,10 +298,6 @@ class Monitoring(QMainWindow):
                 pwd = base64.b64decode(self.current_config["password"]).decode("utf-8")
                 server = self.current_config["server"]
                 port = self.current_config["port"]
-                logs = self.current_config["logs_path"]
-
-                if not os.path.isdir(logs):
-                    raise FileNotFoundError
 
                 attachment = self.current_config["attachment"]
                 mail_receiver = self.current_config["mail_receiver"]
@@ -316,10 +309,7 @@ class Monitoring(QMainWindow):
                 self.lb_error.setText(f"{disk}-Limits sind nicht konfiguriert.")
                 log("Logs/system.log", "error", f"Starten Laufwerk {disk}-Monitorings schlug fehl. Limits sind nicht konfiguriert")
                 return
-            except FileNotFoundError:
-                self.lb_error.setText("Logs-Pfad existiert nicht (mehr)")
-                log("Logs/system.log", "error", f"Log-Pfad '{logs}' zur Speicherung der Schwellenwert-Überschreitungen-Logs extistiert nicht")
-                return
+
             except Exception as e:
                 self.lb_error.setText(f"Fehler: {e}")
                 log("Logs/system.log", "error", f"Aktuelle Konfiguration konnte nicht initiiert werden. Fehler: {e}")
@@ -374,7 +364,7 @@ class Monitoring(QMainWindow):
             """
             try:
                 process = multiprocessing.Process(target=mon_disk, 
-                                                args=(disk, logs, mail_receiver, attachment, soft, 
+                                                args=(disk, mail_receiver, attachment, soft, 
                                                         hard, username, pwd, server, port))
                 process.start()
                 self.processes[disk] = process.pid
@@ -428,10 +418,6 @@ class Monitoring(QMainWindow):
                 pwd = base64.b64decode(self.current_config["password"]).decode("utf-8")
                 server = self.current_config["server"]
                 port = self.current_config["port"]
-                logs = self.current_config["logs_path"]
-
-                if not os.path.isdir(logs):
-                    raise FileNotFoundError
 
                 attachment = self.current_config["attachment"]
                 mail_receiver = self.current_config["mail_receiver"]
@@ -443,10 +429,7 @@ class Monitoring(QMainWindow):
                 self.lb_error.setText(f"{description}-Limits sind nicht konfiguriert.")
                 log("Logs/system.log", "error", f"Starten {typ.upper()}-Monitorings schlug fehl. Limits sind nicht konfiguriert")
                 return
-            except FileNotFoundError:
-                self.lb_error.setText("Logs-Pfad existiert nicht (mehr)")
-                log("Logs/system.log", "error", f"Log-Pfad '{logs}' zur Speicherung der Schwellenwert-Überschreitungen-Logs extistiert nicht")
-                return
+
             except Exception as e:
                 self.lb_error.setText(f"Fehler: {e}")
                 log("Logs/system.log", "error", f"Aktuelle Konfiguration konnte nicht initiiert werden. Fehler: {e}")
@@ -494,7 +477,7 @@ class Monitoring(QMainWindow):
                 self.monitoring.append(description)
 
                 process = multiprocessing.Process(target=function, 
-                                                args=(logs, mail_receiver, attachment, soft, hard, 
+                                                args=(mail_receiver, attachment, soft, hard, 
                                                         username, pwd, server, port))
                 process.start()
                 self.processes[typ] = process.pid
@@ -774,13 +757,13 @@ class Monitoring(QMainWindow):
                     self.tb_logs_monitoring_logs.setText(logs)
                     self.tb_logs_monitoring_logs.moveCursor(QtGui.QTextCursor.End)
 
-            if self.current_config is not None:
-                logs_path = f"{self.current_config['logs_path']}/limits.log"
-                if os.path.isfile(logs_path):
-                    with open(logs_path) as f:
-                        logs = f.read()
-                        self.tb_logs_threshold_limits.setText(logs)
-                        self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
+            
+            logs_path = "Logs/limits.log"
+            if os.path.isfile(logs_path):
+                with open(logs_path) as f:
+                    logs = f.read()
+                    self.tb_logs_threshold_limits.setText(logs)
+                    self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
                                                 
         except:
             pass
@@ -788,18 +771,6 @@ class Monitoring(QMainWindow):
     def initConfig(self):
         self.tab_config = QWidget()
         self.tabWidget.addTab(self.tab_config, "Konfigurieren")
-
-        self.lb_logs_destination_description = QLabel(self.tab_config)
-        self.lb_logs_destination_description.setGeometry(QRect(15, 15, 100, self.lb_y_default))
-        self.lb_logs_destination_description.setText("Pfad der Logs")
-
-        self.le_logs_destination_value = QLineEdit(self.tab_config)
-        self.le_logs_destination_value.setGeometry(QRect(115, 15, 650, self.lb_y_default))
-        self.le_logs_destination_value.setDisabled(True)
-        
-        self.btn_log_path = QPushButton(self.tab_config)
-        self.btn_log_path.setGeometry(QRect(765, 15, 25, self.lb_y_default))
-        self.btn_log_path.setText("...")
 
         self.lb_mail_receiver = QLabel(self.tab_config)
         self.lb_mail_receiver.setGeometry(QRect(15, 50, 330, self.lb_y_default))
@@ -945,7 +916,6 @@ class Monitoring(QMainWindow):
         self.btn_startup_config.setGeometry(QRect(200, self.height-70, 180, self.lb_y_default))
         self.btn_startup_config.setText("Startup Konfiguration speichern")
 
-        self.btn_log_path.clicked.connect(self.get_path)
         self.btn_running_config.clicked.connect(self.running_config)
         self.btn_startup_config.clicked.connect(self.startup_config)
         self.cb_drives_limits.currentTextChanged.connect(self.cb_drives_limits_refresh)
@@ -966,8 +936,7 @@ class Monitoring(QMainWindow):
             # If True, write the current_config.ini-File
             parser = ConfigParser()
 
-            parser["DEFAULT"] = {"Pfad_Logs": self.current_config["logs_path"],
-                                "Mailadressen": self.current_config["mail_receiver"],
+            parser["DEFAULT"] = {"Mailadressen": self.current_config["mail_receiver"],
                                 "Attach_Logs": self.current_config["attachment"]}
 
             parser["Access_to_mail"] = {"user": self.le_mail_sender.text(),
@@ -1004,7 +973,6 @@ class Monitoring(QMainWindow):
                                        "password": "",
                                        "server": "",
                                        "port": "",
-                                       "logs_path": "",
                                        "mail_receiver": [],
                                        "attachment": None,
                                        "limits": {}}
@@ -1019,7 +987,6 @@ class Monitoring(QMainWindow):
                 self.current_config["port"] = int(parser["Access_to_mail"]["port"])
 
                 # Section "DEFAULT"
-                self.current_config["logs_path"] = parser["DEFAULT"]["pfad_logs"]
                 mail_addresses = (parser["DEFAULT"]["mailadressen"]).split(";")
                 for mail in mail_addresses:
                     self.current_config["mail_receiver"].append(mail)
@@ -1081,12 +1048,11 @@ class Monitoring(QMainWindow):
         drive_chosen = {}
 
         # temp-config
-        config = {"logs_path": "",
-                 "mail_receiver": "",
-                 "attachment": None,
-                 "limits": {"cpu": {},
-                            "ram": {},
-                            "drives": {}}}
+        config = {"mail_receiver": "",
+                  "attachment": None,
+                  "limits": {"cpu": {},
+                             "ram": {},
+                             "drives": {}}}
 
         # All drives appended to the temp config dictionary
         for drive in self.drives:
@@ -1094,15 +1060,6 @@ class Monitoring(QMainWindow):
             drive_chosen[drive] = {"soft": "", "hard": ""}
 
         
-        # must_have configs
-        if os.path.isdir(self.le_logs_destination_value.text()):
-            config["logs_path"] = self.le_logs_destination_value.text()
-            log("Logs/system.log", "info", f"Ausgewählter Pfad '{self.le_logs_destination_value.text()}' ist gültig")            
-        else:
-            must_have_inputs.append(False)
-            warn_msg_lb += " Ungültiger Pfad zum Speichern der Logs* |"
-            log("Logs/system.log", "info", f"Ausgewählter Pfad '{self.le_logs_destination_value.text()}' ist ungültig")
-
         if self.le_mail_receiver.text():
             # Check if the addresses are reachable
 
@@ -1378,8 +1335,8 @@ class Monitoring(QMainWindow):
             self.lb_graph_mon_cpu_value.setStyleSheet("color: black")
 
         if "Arbeitsspeicher" in self.monitoring:
-            soft = int(self.current_config["limits"]["cpu"]["soft"])
-            hard = int(self.current_config["limits"]["cpu"]["hard"])
+            soft = int(self.current_config["limits"]["ram"]["soft"])
+            hard = int(self.current_config["limits"]["ram"]["hard"])
 
             if soft <= ram < hard:
                 self.lb_graph_mon_ram_value.setStyleSheet("color: orange")

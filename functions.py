@@ -190,7 +190,7 @@ def sendmail(receiver, sender, message, subject, username, password, smtp_server
         return False
 
 
-def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
+def mon_disk(disk, mail_addresses, attachment, soft, hard, user, password, server, serverport):
     """
     :param disk: String -> Festplatte
     :param logs_destination: String -> Speicherort der Logs
@@ -210,7 +210,7 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
     # der Prozess in der Mainfunction für eine Sekunde.
     try:
         name = f"Laufwerk {disk}-Auslastung"
-        f = f"{logs_destination}/limits.log"
+        f = "Logs/limits.log"
 
         while True:
             disk_usage = get_disk_usage(disk)         
@@ -221,16 +221,10 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                 log_msg = f"{name} >= {soft} % | Aktuelle Auslastung: {disk_usage['used']} GiB/{disk_usage['total']} GiB = {disk_usage['percent']} %"
                 
                 log(f, logtype, log_msg)
-
-                start = time.time()
                 
                 while soft <= disk_usage["percent"] < hard:
                     disk_usage = get_disk_usage(disk)
                     time.sleep(1)
-                
-                end = time.time()
-                
-                log(f, "info", f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}: {str(round((end-start), 2))} s")
                 
             elif disk_usage["percent"] >= hard:
 
@@ -242,31 +236,25 @@ def mon_disk(disk, logs_destination, mail_addresses, attachment, soft, hard, use
                 mail_msg = f"Warnung: Die Festplattennutzung liegt bei {disk_usage['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
                 try:
-                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
-                    log("Logs/system.log", "info", f"Festplattennutzung {disk.replace} - Mail wurde an {mail_addresses} versandt")
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, attachment=[f] if attachment else [])
+                    log("Logs/system.log", "info", f"Festplattennutzung {disk} - Mail wurde an {mail_addresses} versandt")
                 
                 except Exception as e:
-                    log("Logs/system.log", "error", f"Festplattennutzung {disk.replace} - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
-                
-                start = time.time()
-                
+                    log("Logs/system.log", "error", f"Festplattennutzung {disk} - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
+                                
                 while disk_usage["percent"] >= hard:
                     disk_usage = get_disk_usage(disk)
                     time.sleep(1)
 
-                end = time.time()
-                
-                log(f, "info", f"Dauer der letzen Festplatten-Auslastung Laufwerk {disk}:{str(round((end-start), 2))} s")
-                
             time.sleep(1)
 
     except Exception as e:
-        log("Logs/system.log", "error", f"Laufwerk {disk.replace(':', '')}-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
+        log("Logs/system.log", "error", f"Laufwerk {disk}-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
 
-def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
+def mon_cpu(mail_addresses, attachment, soft, hard, user, password, server, serverport):
     try:
         name = f"CPU-Auslastung"
-        f = f"{logs_destination}/limits.log"
+        f = "Logs/limits.log"
 
         while True:
             cpu = psutil.cpu_percent()
@@ -298,31 +286,25 @@ def mon_cpu(logs_destination, mail_addresses, attachment, soft, hard, user, pass
                 mail_msg = f"Warnung: Die CPU-Auslastung liegt bei {cpu} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
                 try:
-                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f] if attachment else [])
                     log("Logs/system.log", "info", f"CPU - Mail wurde an {mail_addresses} versandt")
 
                 except Exception as e:
                     log("Logs/system.log", "error", f"CPU - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")   
                 
-                start = time.time()
-                
                 while cpu >= hard:
                     cpu = psutil.cpu_percent()
                     time.sleep(1)
-                
-                end = time.time()
-                
-                log(f, "info", f"Dauer der letzten CPU-Auslastung: {str(round((end-start), 2))} s")
                 
             time.sleep(1)
 
     except Exception as e:
         log("Logs/system.log", "error", f"CPU-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
 
-def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, password, server, serverport):
+def mon_memory(mail_addresses, attachment, soft, hard, user, password, server, serverport):
     try:
         name = f"Arbeitsspeichernutzung"
-        f = f"{logs_destination}/limits.log"
+        f = "Logs/limits.log"
 
         while True:
             virtual_memory = get_virtual_memory()
@@ -354,7 +336,7 @@ def mon_memory(logs_destination, mail_addresses, attachment, soft, hard, user, p
                 mail_msg = f"Warnung: Die {name} liegt bei {virtual_memory['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
                 try:
-                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f"{logs_destination}/limits.log"] if attachment else [])
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f] if attachment else [])
                     log("Logs/system.log", "info", f"Arbeitsspeicher - Mail wurde an {mail_addresses} versandt")
 
                 except Exception as e:

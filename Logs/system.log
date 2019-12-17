@@ -49,3 +49,53 @@
 2019-12-14 23:04:10,803	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
 2019-12-14 23:04:10,840	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
 2019-12-14 23:04:10,865	INFO	lbehrens	Programm nach 221.24 Sekunden beendet
+2019-12-17 09:13:11,407	INFO	lbehrens	Programm gestartet
+2019-12-17 09:13:11,931	INFO	lbehrens	current_config.ini existiert nicht
+2019-12-17 09:13:15,086	INFO	lbehrens	Temp/running_config.ini-Datei wurde gelöscht
+2019-12-17 09:13:15,094	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
+2019-12-17 09:13:15,107	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
+2019-12-17 09:13:15,118	INFO	lbehrens	Programm nach 3.72 Sekunden beendet
+2019-12-17 09:23:49,266	INFO	lbehrens	Programm gestartet
+2019-12-17 09:24:13,749	INFO	lbehrens	Programm gestartet
+2019-12-17 09:24:14,249	INFO	lbehrens	current_config.ini existiert nicht
+2019-12-17 09:24:49,448	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
+2019-12-17 09:24:49,456	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
+2019-12-17 09:24:49,469	INFO	lbehrens	Programm nach 35.73 Sekunden beendet
+2019-12-17 09:24:51,814	INFO	lbehrens	Programm gestartet
+2019-12-17 09:24:55,167	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-17 09:25:46,500	INFO	lbehrens	Programm gestartet
+2019-12-17 09:26:29,915	INFO	lbehrens	Programm gestartet
+2019-12-17 09:26:46,411	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-17 09:26:47,835	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-17 09:26:50,597	INFO	lbehrens	Festplattennutzung <built-in method replace of str object at 0x0000028A08DABED8> - Mail wurde an ['info@leifbehrens.de'] versandt
+2019-12-17 09:27:10,200	INFO	lbehrens	Temp/running_config.ini-Datei wurde gelöscht
+2019-12-17 09:27:10,245	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
+2019-12-17 09:27:10,263	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
+2019-12-17 09:27:10,276	INFO	lbehrens	Programm nach 40.37 Sekunden beendet
+2019-12-17 09:27:18,780	INFO	lbehrens	Programm gestartet
+2019-12-17 09:27:22,749	INFO	lbehrens	Festplattennutzung B: - Mail wurde an ['info@leifbehrens.de'] versandt
+2019-12-17 09:27:29,824	ERROR	lbehrens	Starten CPU-Monitorings schlug fehl. Limits sind nicht konfiguriert
+2019-12-17 09:27:47,490	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-17 09:27:47,975	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.de' erfolgreich
+2019-12-17 09:27:47,981	INFO	lbehrens	Beende Überprüfung Konfigurationsdateien. Alle essentiellen Eingaben sind gültig.
+2019-12-17 09:27:47,997	INFO	lbehrens	Temp/running_config.ini wurde geschrieben
+2019-12-17 09:27:48,014	INFO	lbehrens	Temp/running_config.ini-Datei erfolgreich geparsed
+2019-12-17 09:27:49,074	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-17 09:27:49,552	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.de' erfolgreich
+2019-12-17 09:27:49,558	INFO	lbehrens	Beende Überprüfung Konfigurationsdateien. Alle essentiellen Eingaben sind gültig.
+2019-12-17 09:27:49,571	INFO	lbehrens	Temp/running_config.ini wurde geschrieben
+2019-12-17 09:27:49,576	INFO	lbehrens	Temp/running_config.ini-Datei erfolgreich geparsed
+2019-12-17 09:27:49,602	INFO	lbehrens	startup_config.ini erfolgreich erstellt
+2019-12-17 09:27:50,716	INFO	lbehrens	Mailkonto-Validierung mit Konto 'no-reply@leifbehrens.de' erfolgreich
+2019-12-17 09:27:52,594	INFO	lbehrens	Starte Überprüfung Konfigurationsdateien
+2019-12-17 09:27:53,064	INFO	lbehrens	Validierung der Empfänger-Mailadressen 'info@leifbehrens.de' erfolgreich
+2019-12-17 09:27:53,071	INFO	lbehrens	Beende Überprüfung Konfigurationsdateien. Alle essentiellen Eingaben sind gültig.
+2019-12-17 09:27:53,085	INFO	lbehrens	Temp/running_config.ini wurde geschrieben
+2019-12-17 09:27:53,097	INFO	lbehrens	Temp/running_config.ini-Datei erfolgreich geparsed
+2019-12-17 09:28:03,990	INFO	lbehrens	Festplattennutzung B: - Mail wurde an ['info@leifbehrens.de'] versandt
+2019-12-17 09:30:13,772	INFO	lbehrens	CPU - Mail wurde an ['info@leifbehrens.de'] versandt
+2019-12-17 09:30:14,456	INFO	lbehrens	Computerinformationen als xml unter G:/Eigene Dateien/Dokumente/Alle Dokumente/Eigene Dateien/Programmieren/Python/Projekte/Monitoring_GUI/jhg.json gespeichert.
+2019-12-17 09:30:36,534	INFO	lbehrens	Temp/running_config.ini-Datei wurde gelöscht
+2019-12-17 09:30:36,576	INFO	lbehrens	Temp\cpu.pickle-Datei wurde gelöscht
+2019-12-17 09:30:36,595	INFO	lbehrens	Temp\ram.pickle-Datei wurde gelöscht
+2019-12-17 09:30:36,597	INFO	lbehrens	Programm nach 197.83 Sekunden beendet
