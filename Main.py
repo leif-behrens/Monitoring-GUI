@@ -1453,7 +1453,7 @@ if __name__ == "__main__":
         parser.add_argument("startstop", metavar="start, stop", help="Starten (start) oder stoppen (stop) eines Monitorings", choices=["start", "stop"])
         parser.add_argument("monitoring", metavar=", ".join(mon), help="Typ des Monitoring", choices=mon)
 
-        parser.add_argument("-a", metavar="", action="store_true", dest="attachment", help="Attachment als Anhang senden")
+        parser.add_argument("-a", action="store_true", dest="attachment", help="Attachment als Anhang senden")
 
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument("-c", "--config", metavar="", action="store", dest="config", help="Relativen oder absoluten Pfad einer Konfigurationsdatei")
@@ -1507,24 +1507,43 @@ if __name__ == "__main__":
                                 print(f"{args.monitoring}-Monitoring läuft bereits unter der Prozess-ID {pid}")
                                 sys.exit()
                     
-                    subprocess.Popen(f"")
-
+                    try:
+                        subprocess.Popen(f"functions.exe start {args.monitoring} -m {soft} {hard} {mail_addresses[0]} {user} {password} {server} {port}")
+                        print(f"{args.monitoring}-Monitoring wurde gestartet")
+                        log("Log/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
+                        sys.exit()
+                    except Exception as e:
+                        print(f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
+                        log("Logs/system.log", "error", f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
+                        sys.exit()
 
                 except Exception as e:
                     log("Logs/system.log", "error", f"Validierung am SMTP-Server war nicht möglich. Fehler: {e}")
                     print(f"Validierung am SMTP-Server war nicht möglich. Fehler: {e}")
+                    sys.exit()
 
             except Exception as e:
                 log("Logs/system.log", "error", f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e}")
                 print(f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e}")
                 sys.exit()
         
-        if args.startstop == "start" and args.commands:
-            if args.attachment:
-                attachment = "True"
-            else:
-                attachment = "False"
-            print("start+manual")
+        elif args.startstop == "start" and args.commands:
+            try:
+                if args.attachment:
+                    subprocess.Popen(f"functions.exe start {args.monitoring} -a -m {int(args.commands[0])} {int(args.commands[1])} {args.commands[2]} {args.commands[3]} {args.commands[4]} {args.commands[5]} {int(args.commands[2])}")
+                    print(f"{args.monitoring}-Monitoring wurde gestartet")
+                    log("Log/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
+                    sys.exit()
+                else:
+                    subprocess.Popen(f"functions.exe start {args.monitoring} -m {int(args.commands[0])} {int(args.commands[1])} {args.commands[2]} {args.commands[3]} {args.commands[4]} {args.commands[5]} {int(args.commands[2])}")
+                    print(f"{args.monitoring}-Monitoring wurde gestartet")
+                    log("Log/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
+                    sys.exit()
+
+            except Exception as e:
+                print(f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
+                log("Logs/system.log", "error", f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
+                sys.exit()
 
     else:
     

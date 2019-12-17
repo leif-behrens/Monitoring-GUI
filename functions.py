@@ -191,7 +191,6 @@ def sendmail(receiver, sender, message, subject, username, password, smtp_server
         log("Logs/system.log", "error", f"Mailversand. Fehler: {e}")
         return False
 
-
 def mon_disk(disk, mail_addresses, attachment, soft, hard, user, password, server, serverport):
     """
     :param disk: String -> Festplatte
@@ -385,7 +384,6 @@ if __name__ == '__main__':
     parser.add_argument("-a", metavar="", action="store_true", dest="attachment", help="Attachment als Anhang senden")
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-c", "--config", metavar="", action="store", dest="config", help="Relativen oder absoluten Pfad einer Konfigurationsdatei")
     group.add_argument("-m", "--manual", metavar="", action="store", dest="commands", nargs=7,
                         help="int: <Softlimit>, int: <Hardlimit>, str: <Mailempfänger>, str: <Mailuser>, str: <Mailpassword>, str: <SMTP-Server>, int: <Port>")
 
@@ -397,15 +395,25 @@ if __name__ == '__main__':
     else:
         attachment = False
 
-    if args.monitoring == "cpu" and args.startstop == "start":
-        log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
-        mon_cpu([args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
+    if args.startstop == "start":
+        if args.monitoring == "cpu":
+            log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
+            mon_cpu([args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
 
+        elif args.monitoring == "ram":
+            log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
+            mon_memory([args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
 
-    elif args.monitoring == "ram" and args.startstop == "start":
-        log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
-        mon_memory([args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
+        elif args.monitoring in mon:
+            log("Logs/monitoring.log", "info", f"{args.monitoring.upper()}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
+            mon_disk(f"{args.monitoring.upper()}:", [args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
 
-    elif args.monitoring in mon and args.startstop == "start":
-        log("Logs/monitoring.log", "info", f"{args.monitoring.upper()}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
-        mon_disk(f"{args.monitoring.upper()}:", [args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
+    if args.startstop == "stop":
+        if args.monitoring == "cpu":
+            pass
+
+        elif args.monitoring == "ram":
+            pass
+
+        elif args.monitoring in mon:
+            pass
