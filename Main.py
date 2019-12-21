@@ -78,11 +78,10 @@ class Monitoring(QMainWindow):
         self.timer_refresh_current_utilization = QTimer(self)
         self.timer_refresh_current_utilization.timeout.connect(self.refresh_current_utilization)
         self.timer_refresh_current_utilization.start(1000)
-        self.current_timer = 0
         
         # initialize Main Window
         self.initWindow()
-        
+
         # if the startup_config.ini - File exists the current_configuration initialiaze
         if os.path.isfile("startup_config.ini"):
             self.lb_timer = time.time()
@@ -185,7 +184,6 @@ class Monitoring(QMainWindow):
             
             # Delete all pickle-Files
             for f in glob.glob("Temp/*.pickle"):
-                print(f)
                 if f == "Temp\processes.pickle":
                     continue
                 os.remove(f)
@@ -212,7 +210,6 @@ class Monitoring(QMainWindow):
         self.initComputerinformation()
         self.initLogs()        
         self.initConfig()        
-        #self.initCurrentUtilization()
         self.initGraph()
         
         # Anzeige der GUI
@@ -668,6 +665,43 @@ class Monitoring(QMainWindow):
         self.lb_drives_value = QLabel(self.tab_computerinformation)
         self.lb_drives_value.setGeometry(QRect(200, y, self.lb_x_default, self.lb_y_default))
         self.lb_drives_value.setText(", ".join(self.drives))
+        y += 40
+
+
+        self.lb_drive_description = QLabel(self.tab_computerinformation)
+        self.lb_drive_description.setGeometry(QRect(45, y, self.lb_x_default, self.lb_y_default))
+        self.lb_drive_description.setText("Laufwerk")
+
+        self.cb_drive = QComboBox(self.tab_computerinformation)
+        self.cb_drive.setGeometry(QRect(100, y, 40, 25))
+        
+        for drive in self.drives:
+            self.cb_drive.addItem(drive)
+
+        self.lb_total_description = QLabel(self.tab_computerinformation)
+        self.lb_total_description.setGeometry(QRect(200, y, 100, self.lb_y_default))
+        self.lb_total_description.setText("Gesamt")
+
+        self.lb_total_value = QLabel(self.tab_computerinformation)
+        self.lb_total_value.setGeometry(QRect(275, y, 100, self.lb_y_default))
+        y += 25
+
+
+        self.lb_used_description = QLabel(self.tab_computerinformation)
+        self.lb_used_description.setGeometry(QRect(200, y, 100, self.lb_y_default))
+        self.lb_used_description.setText("Genutzt")
+
+        self.lb_used_value = QLabel(self.tab_computerinformation)
+        self.lb_used_value.setGeometry(QRect(275, y, 100, self.lb_y_default))
+        y += 25
+
+
+        self.lb_free_description = QLabel(self.tab_computerinformation)
+        self.lb_free_description.setGeometry(QRect(200, y, 100, self.lb_y_default))
+        self.lb_free_description.setText("Frei")
+
+        self.lb_free_value = QLabel(self.tab_computerinformation)
+        self.lb_free_value.setGeometry(QRect(275, y, 100, self.lb_y_default))
         y += 25
 
         
@@ -686,12 +720,22 @@ class Monitoring(QMainWindow):
 
         self.btn_save_xml.clicked.connect(self.save_xml)
         self.btn_save_json.clicked.connect(self.save_json)
+        self.cb_drive.currentTextChanged.connect(self.cb_drive_change)
+
+        # Initialize Labels
+        self.cb_drive_change()
+
+    def cb_drive_change(self):
+        self.lb_total_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["total_GiB"]) + " GiB")
+        self.lb_used_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["used_GiB"]) + " GiB")
+        self.lb_free_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["free_GiB"]) + " GiB")
 
     def save_xml(self):
         data = QFileDialog.getSaveFileName(self, "Speichern", "", "XML (*.xml)")
 
         xml = dicttoxml.dicttoxml(self.computerinfo)
         dom = parseString(xml)
+        self.lb_timer = time.time()
 
         try:
             if data[0]:
@@ -699,7 +743,7 @@ class Monitoring(QMainWindow):
                     x.write(dom.toprettyxml())
                 
                 self.lb_info_saved.setText(f"Gespeichert unter {data[0]}")
-                log("Logs/system.log", "info", f"Computerinformationen als json unter {data[0]} gespeichert.")
+                log("Logs/system.log", "info", f"Computerinformationen als json unter {data[0]} gespeichert")
         
         except Exception as e:
             log("Logs/system.log", "error", f"Computerinformationen konnte nicht als json unter {data[0]} gespeichert werden. Fehler: {e}")
@@ -707,13 +751,14 @@ class Monitoring(QMainWindow):
     def save_json(self):
         data = QFileDialog.getSaveFileName(self, "Speichern", "", "JSON (*.json)")
         
+        self.lb_timer = time.time()
         try:
             if data[0]:                    
                 with open(data[0], "w") as j:
                     json.dump(self.computerinfo, j, indent=4)
 
                 self.lb_info_saved.setText(f"Gespeichert unter {data[0]}")
-                log("Logs/system.log", "info", f"Computerinformationen als xml unter {data[0]} gespeichert.")
+                log("Logs/system.log", "info", f"Computerinformationen als xml unter {data[0]} gespeichert")
 
         except Exception as e:
             log("Logs/system.log", "error", f"Computerinformationen konnte nicht als xml unter {data[0]} gespeichert werden. Fehler: {e}")
@@ -1263,7 +1308,7 @@ class Monitoring(QMainWindow):
         
         self.lb_graph_mon_cpu_avg_description = QLabel(self.tab_graph_mon)
         self.lb_graph_mon_cpu_avg_description.setGeometry(QRect(165, y, self.lb_x_default, self.lb_y_default))
-        self.lb_graph_mon_cpu_avg_description.setText("CPU-Durchschnitt Systemzeit:")
+        self.lb_graph_mon_cpu_avg_description.setText("CPU-Durchschnitt (60s):")
 
         self.lb_graph_mon_cpu_avg_value = QLabel(self.tab_graph_mon)
         self.lb_graph_mon_cpu_avg_value.setGeometry(QRect(365, y, 50, self.lb_y_default))
@@ -1279,7 +1324,7 @@ class Monitoring(QMainWindow):
 
         self.lb_graph_mon_ram_avg_description = QLabel(self.tab_graph_mon)
         self.lb_graph_mon_ram_avg_description.setGeometry(QRect(165, y, self.lb_x_default, self.lb_y_default))
-        self.lb_graph_mon_ram_avg_description.setText("Arbeitsspeicher-Durchschnitt Systemzeit:")
+        self.lb_graph_mon_ram_avg_description.setText("Arbeitsspeicher-Durchschnitt (60s):")
 
         self.lb_graph_mon_ram_avg_value = QLabel(self.tab_graph_mon)
         self.lb_graph_mon_ram_avg_value.setGeometry(QRect(365, y, 50, self.lb_y_default))
@@ -1322,10 +1367,6 @@ class Monitoring(QMainWindow):
         cpu_avg = round(sum(self.cpu_values)/len(self.cpu_values), 2)
         ram_avg = round(sum(self.ram_values)/len(self.ram_values), 2)
 
-        """
-        Wenn systemtime_values und cpu_values/ram_values > 60, dann lösche den ersten Wert (in der animate-method anpassen)
-        """
-
         with open("Temp/cpu.pickle", "wb") as p:
             pickle.dump([self.systemtime_values, self.cpu_values], p)
 
@@ -1339,11 +1380,12 @@ class Monitoring(QMainWindow):
         self.lb_graph_mon_cpu_avg_value.setText(str(cpu_avg) + " %")
         self.lb_graph_mon_ram_avg_value.setText(str(ram_avg) + " %")
 
-        if time.time() - self.lb_timer >= 5:
+        if time.time() - self.lb_timer >= 3:
             self.lb_config_warnings.clear()
             self.lb_error.clear()
             self.lb_validate_login.clear()
             self.lb_status.clear()
+            self.lb_info_saved.clear()
 
         if "CPU" in self.monitoring:
             soft = int(self.current_config["limits"]["cpu"]["soft"])
@@ -1408,8 +1450,6 @@ class PlotCanvas(FigureCanvas):
                 
                 self.axis.clear()
                 self.axis.set_ylim(ymin=0, ymax=105)
-
-                #self.axis.get_xaxis().set_visible(False)
 
                 self.axis.set_ylabel("Auslastung in %")
                 self.axis.set_xlabel("Zeit in s")
