@@ -12,6 +12,7 @@ import pickle
 import getpass
 import argparse
 import sys
+import glob
 
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -248,7 +249,7 @@ def mon_disk(disk, mail_addresses, attachment, soft, hard, user, password, serve
                 mail_msg = f"Warnung: Die Festplattennutzung liegt bei {disk_usage['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
                 try:
-                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, attachment=[f] if attachment else [])
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, attachment=glob.glob("Logs/*.log") if attachment else [])
                     log("Logs/system.log", "info", f"Festplattennutzung {disk} - Mail wurde an {mail_addresses} versandt")
                 
                 except Exception as e:
@@ -264,6 +265,18 @@ def mon_disk(disk, mail_addresses, attachment, soft, hard, user, password, serve
         log("Logs/system.log", "error", f"Laufwerk {disk}-Monitoring wurde beendet. Genaue Fehlerbeschreibung: {e}")
 
 def mon_cpu(mail_addresses, attachment, soft, hard, user, password, server, serverport):
+    if len(sys.argv) > 1:
+
+        if os.path.isfile("Temp/processes.pickle"):
+            with open("Temp/processes.pickle", "rb") as p:
+                processes = pickle.load(p)
+        else:
+            processes = {}
+        
+        processes["cpu"] = os.getpid()
+        with open("Temp/processes.pickle", "wb") as p:
+            pickle.dump(processes, p)
+
     try:
         name = f"CPU-Auslastung"
         f = "Logs/limits.log"
@@ -278,15 +291,9 @@ def mon_cpu(mail_addresses, attachment, soft, hard, user, password, server, serv
 
                 log(f, logtype, log_msg)
 
-                start = time.time()
-                
                 while soft <= cpu < hard:
                     cpu = psutil.cpu_percent()
                     time.sleep(1)
-                
-                end = time.time()
-                
-                log(f, "info", f"Dauer der letzten CPU-Auslastung: {str(round((end-start), 2))} s")
                 
             elif cpu >= hard:
 
@@ -298,7 +305,7 @@ def mon_cpu(mail_addresses, attachment, soft, hard, user, password, server, serv
                 mail_msg = f"Warnung: Die CPU-Auslastung liegt bei {cpu} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
                 try:
-                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f] if attachment else [])
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=glob.glob("Logs/*.log") if attachment else [])
                     log("Logs/system.log", "info", f"CPU - Mail wurde an {mail_addresses} versandt")
 
                 except Exception as e:
@@ -314,6 +321,18 @@ def mon_cpu(mail_addresses, attachment, soft, hard, user, password, server, serv
         log("Logs/system.log", "error", f"CPU-Monitoring wurde unerwartet beendet. Genaue Fehlerbeschreibung: {e}")
 
 def mon_memory(mail_addresses, attachment, soft, hard, user, password, server, serverport):
+    if len(sys.argv) > 1:
+
+        if os.path.isfile("Temp/processes.pickle"):
+            with open("Temp/processes.pickle", "rb") as p:
+                processes = pickle.load(p)
+        else:
+            processes = {}
+        
+        processes["ram"] = os.getpid()
+        with open("Temp/processes.pickle", "wb") as p:
+            pickle.dump(processes, p)
+
     try:
         name = f"Arbeitsspeichernutzung"
         f = "Logs/limits.log"
@@ -327,16 +346,10 @@ def mon_memory(mail_addresses, attachment, soft, hard, user, password, server, s
                 log_msg = f"{name} >= {soft} % | Aktuelle Auslastung: {virtual_memory['used']} GiB/{virtual_memory['total']} GiB = {virtual_memory['percent']} %"
 
                 log(f, logtype, log_msg)
-
-                start = time.time()
                 
                 while soft <= virtual_memory["percent"] < hard:
                     virtual_memory = get_virtual_memory()
                     time.sleep(1)
-                
-                end = time.time()
-                
-                log(f, "info", f"Dauer der letzten Arbeitsspeicher-Auslastung: {str(round((end-start), 2))} s")
                 
             elif virtual_memory["percent"] >= hard:
 
@@ -348,21 +361,15 @@ def mon_memory(mail_addresses, attachment, soft, hard, user, password, server, s
                 mail_msg = f"Warnung: Die {name} liegt bei {virtual_memory['percent']} % | {time.strftime('%d.%m.%y %H:%M:%S')}"
 
                 try:
-                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=[f] if attachment else [])
+                    sendmail(mail_addresses, user, mail_msg, name, user, password, server, port=serverport, attachment=glob.glob("Logs/*.log") if attachment else [])
                     log("Logs/system.log", "info", f"Arbeitsspeicher - Mail wurde an {mail_addresses} versandt")
 
                 except Exception as e:
                     log("Logs/system.log", "error", f"Arbeitsspeicher - Mail wurde nicht versandt. Genaue Fehlerbeschreibung: {e}")
                    
-                start = time.time()
-                
                 while virtual_memory["percent"] >= hard:
                     virtual_memory = get_virtual_memory()
                     time.sleep(1)
-                
-                end = time.time()
-                
-                log(f, "info", f"Dauer der letzten Arbeitsspeicher-Auslastung: {str(round((end-start), 2))} s")
                 
             time.sleep(1)
 
@@ -381,7 +388,7 @@ if __name__ == '__main__':
     parser.add_argument("startstop", metavar="start, stop", help="Starten (start) oder stoppen (stop) eines Monitorings", choices=["start", "stop"])
     parser.add_argument("monitoring", metavar=", ".join(mon), help="Typ des Monitoring", choices=mon)
 
-    parser.add_argument("-a", metavar="", action="store_true", dest="attachment", help="Attachment als Anhang senden")
+    parser.add_argument("-a", action="store_true", dest="attachment", help="Attachment als Anhang senden")
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-m", "--manual", metavar="", action="store", dest="commands", nargs=7,
@@ -390,30 +397,16 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.attachment:
-        attachment = True
-    else:
-        attachment = False
 
     if args.startstop == "start":
         if args.monitoring == "cpu":
-            log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
-            mon_cpu([args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
+            log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}")
+            mon_cpu(args.commands[2], args.attachment, int(args.commands[0]), int(args.commands[1]), args.commands[3], args.commands[4], args.commands[5], int(args.commands[6]))
 
         elif args.monitoring == "ram":
             log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
-            mon_memory([args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
+            mon_memory(args.commands[2], args.attachment, int(args.commands[0]), int(args.commands[1]), args.commands[3], args.commands[4], args.commands[5], int(args.commands[6]))
 
         elif args.monitoring in mon:
             log("Logs/monitoring.log", "info", f"{args.monitoring.upper()}-Monitoring wurde gestarted. Prozess-ID: {os.getpid()}") 
-            mon_disk(f"{args.monitoring.upper()}:", [args.receiver], attachment, args.soft, args.hard, args.user, args.password, args.server, args.port)
-
-    if args.startstop == "stop":
-        if args.monitoring == "cpu":
-            pass
-
-        elif args.monitoring == "ram":
-            pass
-
-        elif args.monitoring in mon:
-            pass
+            mon_disk(f"{args.monitoring.upper()}:", args.commands[2], args.attachment, int(args.commands[0]), int(args.commands[1]), args.commands[3], args.commands[4], args.commands[5], int(args.commands[6]))

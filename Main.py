@@ -85,6 +85,8 @@ class Monitoring(QMainWindow):
         
         # if the startup_config.ini - File exists the current_configuration initialiaze
         if os.path.isfile("startup_config.ini"):
+            self.lb_timer = time.time()
+
             try:
                 self.current_config = {"username": "",
                                        "password": "",
@@ -183,6 +185,9 @@ class Monitoring(QMainWindow):
             
             # Delete all pickle-Files
             for f in glob.glob("Temp/*.pickle"):
+                print(f)
+                if f == "Temp\processes.pickle":
+                    continue
                 os.remove(f)
                 log("Logs/system.log", "info", f"{f}-Datei wurde gelöscht")
             
@@ -292,7 +297,9 @@ class Monitoring(QMainWindow):
     def start_disk(self, disk):
         """
         :param disk: current chosen disk in the combobox
-        """        
+        """
+        
+        self.lb_timer = time.time()
 
         # Only if the current_config is initialized you can start monitoring
         if self.current_config is not None:
@@ -412,6 +419,7 @@ class Monitoring(QMainWindow):
         # Initialize errorlabel und statuslabel
         self.lb_error.clear()
         self.lb_status.clear()
+        self.lb_timer = time.time()
         
         # Only if the current_config is initialized you are able to start the monitoring
         if self.current_config is not None:
@@ -933,6 +941,7 @@ class Monitoring(QMainWindow):
     def running_config(self):
         # Check, ob alle Eingaben in Ordnung sind
         self.current_config = self.check_config()
+        self.lb_timer = time.time()
 
         if self.current_config:
 
@@ -1015,6 +1024,8 @@ class Monitoring(QMainWindow):
         first save current_config, then copy the current_config.ini file to startup_config.ini file
         """
 
+        self.lb_timer = time.time()
+
         self.running_config()
         try:
             shutil.copy("Temp/running_config.ini", "startup_config.ini")            
@@ -1034,6 +1045,8 @@ class Monitoring(QMainWindow):
         self.lb_config_warnings.clear()
         self.lb_config_warnings.setStyleSheet("color: red")
         self.lb_validate_login.clear()
+        self.lb_timer = time.time()
+
         log("Logs/system.log", "info", "Starte Überprüfung Konfigurationsdateien")
 
         if self.processes:
@@ -1064,28 +1077,13 @@ class Monitoring(QMainWindow):
 
         
         if self.le_mail_receiver.text():
-            # Check if the addresses are reachable
-
-            try:
-                server = smtplib.SMTP(self.le_mail_server.text(), int(self.le_mail_server_port.text()))
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(self.le_mail_sender.text(), self.le_mail_password.text())
-                server.sendmail(self.le_mail_sender.text(), self.le_mail_receiver.text().split(";"), "Validiere")
-                server.quit()
-                config["mail_receiver"] = self.le_mail_receiver.text()
-                log("Logs/system.log", "info", f"Validierung der Empfänger-Mailadressen '{self.le_mail_receiver.text()}' erfolgreich")
-            except Exception as e:
-                must_have_inputs.append(False)
-                warn_msg_lb += " Adressen konnten nicht erreicht werden* |"
-                log("Logs/system.log", "error", f"Validierung der Empfänger-Mailadressen '{self.le_mail_receiver.text()}' fehlgeschlagen. Fehler: {e}")
-
+            config["mail_receiver"] = self.le_mail_receiver.text()
         else:
             must_have_inputs.append(False)
             warn_msg_lb += " Keine Mailadresse angegeben* |"
             log("Logs/system.log", "info", "Keine Mailadressen angegeben")
         
+
         if self.cb_attachment_sent.currentText() == "Nein":
             config["attachment"] = False
         else:
@@ -1095,11 +1093,15 @@ class Monitoring(QMainWindow):
         # The Limits are optional. But the user is just able to start the monitoring if the limits are set
 
         # Some checks for the limits of the cpu
-        if self.cb_cpu_softlimit.currentText() == "" or self.cb_cpu_softlimit.currentText()  == "":
-            pass
-        
-        elif (self.cb_cpu_softlimit.currentText()  == "" and not self.cb_cpu_hardlimit.currentText()  == "") or (self.cb_cpu_hardlimit.currentText()  == "" and not self.cb_cpu_softlimit.currentText()  == ""):
+
+        if (self.cb_cpu_softlimit.currentText() == "") and (not self.cb_cpu_hardlimit.currentText() == ""):
             warn_msg_lb += " CPU - Wert wurde nicht eingegeben |"
+        
+        elif (self.cb_cpu_hardlimit.currentText() == "") and (not self.cb_cpu_softlimit.currentText() == ""):
+            warn_msg_lb += " CPU - Wert wurde nicht eingegeben |"
+        
+        elif self.cb_cpu_softlimit.currentText() == "" and self.cb_cpu_softlimit.currentText() == "":
+            pass
 
         elif int(self.cb_cpu_softlimit.currentText() ) >= int(self.cb_cpu_hardlimit.currentText() ):
             warn_msg_lb += " CPU - Hardlimit muss größer als Softlimit sein |"
@@ -1110,12 +1112,16 @@ class Monitoring(QMainWindow):
 
 
         # Some checks for the limits of the ram
-        if self.cb_ram_softlimit.currentText() == "" or self.cb_ram_softlimit.currentText()  == "":
-            pass
-        
-        elif (self.cb_ram_softlimit.currentText()  == "" and not self.cb_ram_hardlimit.currentText()  == "") or (self.cb_ram_hardlimit.currentText()  == "" and not self.cb_ram_softlimit.currentText()  == ""):
+                
+        if (self.cb_ram_softlimit.currentText()  == "" and not self.cb_ram_hardlimit.currentText()  == ""):
             warn_msg_lb += " Arbeitsspeicher - Ein Wert wurde nicht eingegeben |"
 
+        elif (self.cb_ram_hardlimit.currentText()  == "" and not self.cb_ram_softlimit.currentText()  == ""):
+            warn_msg_lb += " Arbeitsspeicher - Ein Wert wurde nicht eingegeben |"
+
+        elif self.cb_ram_softlimit.currentText() == "" and self.cb_ram_softlimit.currentText()  == "":
+            pass
+        
         elif int(self.cb_ram_softlimit.currentText() ) >= int(self.cb_ram_hardlimit.currentText()):
             warn_msg_lb += " Arbeitsspeicher - Hardlimit muss größer als Softlimit sein |"
         
@@ -1182,6 +1188,7 @@ class Monitoring(QMainWindow):
         Validate the login data 
         """
 
+        self.lb_timer = time.time()
         self.lb_validate_login.clear()
         self.lb_config_warnings.clear()
 
@@ -1306,9 +1313,18 @@ class Monitoring(QMainWindow):
         self.cpu_values.append(cpu)
         self.ram_values.append(ram)
         self.systemtime_values.append(system_time)
+
+        if len(self.cpu_values) > 60:
+            del self.cpu_values[0]
+            del self.ram_values[0]
+            del self.systemtime_values[0]
         
         cpu_avg = round(sum(self.cpu_values)/len(self.cpu_values), 2)
         ram_avg = round(sum(self.ram_values)/len(self.ram_values), 2)
+
+        """
+        Wenn systemtime_values und cpu_values/ram_values > 60, dann lösche den ersten Wert (in der animate-method anpassen)
+        """
 
         with open("Temp/cpu.pickle", "wb") as p:
             pickle.dump([self.systemtime_values, self.cpu_values], p)
@@ -1323,7 +1339,12 @@ class Monitoring(QMainWindow):
         self.lb_graph_mon_cpu_avg_value.setText(str(cpu_avg) + " %")
         self.lb_graph_mon_ram_avg_value.setText(str(ram_avg) + " %")
 
-        
+        if time.time() - self.lb_timer >= 5:
+            self.lb_config_warnings.clear()
+            self.lb_error.clear()
+            self.lb_validate_login.clear()
+            self.lb_status.clear()
+
         if "CPU" in self.monitoring:
             soft = int(self.current_config["limits"]["cpu"]["soft"])
             hard = int(self.current_config["limits"]["cpu"]["hard"])
@@ -1350,17 +1371,6 @@ class Monitoring(QMainWindow):
         else:
             self.lb_graph_mon_ram_value.setStyleSheet("color: black")
         
-        
-
-        if self.current_timer % 10 == 0:
-            self.lb_error.clear()
-            self.lb_status.clear()
-            self.lb_validate_login.clear()
-            self.lb_config_warnings.clear()        
-
-        self.current_timer += 1
-
-
 
 class PlotCanvas(FigureCanvas):
 
@@ -1392,11 +1402,6 @@ class PlotCanvas(FigureCanvas):
 
                 y_mean = [sum(ys)/len(ys)] * len(ys)
 
-                while len(xs) > 60:
-                    del xs[0]
-                    del ys[0]
-                    del y_mean[0]
-
                 # Scaling is in int, not float
                 self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
                 self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -1426,7 +1431,7 @@ class PlotCanvas(FigureCanvas):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        log("Logs/system.log", "info", f"{sys.argv[0]} wurde mit folgenden Kommandozeilenparametern geöffnet: {sys.argv[1::]}")
+        log("Logs/system.log", "info", f"{sys.argv[0]} wurde mit Kommandozeilenparametern gestartet")
 
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, 
                                         description=textwrap.dedent("""\
@@ -1436,7 +1441,7 @@ if __name__ == "__main__":
         Um das Monitoring für die CPU zu starten, mit Softlimit 70 und Hardlimit 80:
         python Main.py start cpu -S 70 -H 80 -r <Email-Empfänger> -U <Email-User> -P <Passwort> -s <SMTP-Server> -p <Port>
         
-        Das Passwort muss ggf. in Anführungszeichen angegeben werden, falls im Kennwort ein kaufmännischen Und (&) enthalten ist!
+        !!! Das Passwort muss ggf. in Anführungszeichen angegeben werden, falls im Kennwort ein kaufmännischen Und (&) enthalten ist!
         
         Um das Monitoring für den Arbeitsspeicher zu starten und eine Konfigurationsdatei vorhanden ist:
         python Main.py start ram -C <Konfigurationsdatei>
@@ -1446,18 +1451,20 @@ if __name__ == "__main__":
         python Main.py stop cpu
         """))
 
-        mon = ["cpu", "ram"]
+        mon = ["all", "cpu", "ram"]
         for drive in get_pc_information()["drives"]:
             mon.append(drive.replace(":", "").lower())
         
-        parser.add_argument("startstop", metavar="start, stop", help="Starten (start) oder stoppen (stop) eines Monitorings", choices=["start", "stop"])
+        parser.add_argument("startstop", metavar="start, stop", help="Starten (start) oder stoppen (stop) eines Monitorings. Um alle Monitorings zu stoppen: stop all", 
+                            choices=["start", "stop"])
         parser.add_argument("monitoring", metavar=", ".join(mon), help="Typ des Monitoring", choices=mon)
 
         parser.add_argument("-a", action="store_true", dest="attachment", help="Attachment als Anhang senden")
 
-        group = parser.add_mutually_exclusive_group(required=True)
-        group.add_argument("-c", "--config", metavar="", action="store", dest="config", help="Relativen oder absoluten Pfad einer Konfigurationsdatei")
-        group.add_argument("-m", "--manual", metavar="", action="store", dest="commands", nargs=7,
+        group = parser.add_mutually_exclusive_group()
+
+        group.add_argument("-c", "--config", metavar="", action="store", dest="config", nargs=1, help="Relativen oder absoluten Pfad einer Konfigurationsdatei")
+        group.add_argument("-m", "--manual", metavar="", action="store", dest="commands", nargs=7, 
                            help="int: <Softlimit>, int: <Hardlimit>, str: <Mailempfänger>, str: <Mailuser>, str: <Mailpassword>, str: <SMTP-Server>, int: <Port>")
         
         args = parser.parse_args()
@@ -1509,9 +1516,11 @@ if __name__ == "__main__":
                     
                     try:
                         subprocess.Popen(f"functions.exe start {args.monitoring} -m {soft} {hard} {mail_addresses[0]} {user} {password} {server} {port}")
+                        #subprocess.Popen(f"python functions.py start {args.monitoring} -m {soft} {hard} {mail_addresses[0]} {user} {password} {server} {port}")
                         print(f"{args.monitoring}-Monitoring wurde gestartet")
-                        log("Log/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
+                        log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
                         sys.exit()
+
                     except Exception as e:
                         print(f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
                         log("Logs/system.log", "error", f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
@@ -1523,27 +1532,80 @@ if __name__ == "__main__":
                     sys.exit()
 
             except Exception as e:
-                log("Logs/system.log", "error", f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e}")
-                print(f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e}")
+                log("Logs/system.log", "error", f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e} nicht konfiguriert")
+                print(f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e} nicht konfiguriert")
                 sys.exit()
         
         elif args.startstop == "start" and args.commands:
+            if args.monitoring == "all":
+                print("Der Parameter 'all' kann nur beim stoppen von Monitorings übergeben werden")
+                sys.exit()
+
+            if os.path.isfile("Temp/processes.pickle"):
+                    with open("Temp/processes.pickle", "rb") as p:
+                        processes = pickle.load(p)
+                    
+                    for process, pid in processes.items():
+                        if process == args.monitoring:
+                            print(f"{args.monitoring}-Monitoring läuft bereits unter der Prozess-ID {pid}")
+                            sys.exit()
             try:
-                if args.attachment:
-                    subprocess.Popen(f"functions.exe start {args.monitoring} -a -m {int(args.commands[0])} {int(args.commands[1])} {args.commands[2]} {args.commands[3]} {args.commands[4]} {args.commands[5]} {int(args.commands[2])}")
-                    print(f"{args.monitoring}-Monitoring wurde gestartet")
-                    log("Log/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
+                if int(args.commands[0]) >= int(args.commands[1]) or int(args.commands[0]) > 100 or int(args.commands[0]) < 0 or int(args.commands[1]) > 100 or int(args.commands[1]) < 0:
+                    print("Ungültige Werte für die Limits")
                     sys.exit()
-                else:
-                    subprocess.Popen(f"functions.exe start {args.monitoring} -m {int(args.commands[0])} {int(args.commands[1])} {args.commands[2]} {args.commands[3]} {args.commands[4]} {args.commands[5]} {int(args.commands[2])}")
+
+                if args.attachment:
+                    subprocess.Popen(f'functions.exe start {args.monitoring} -a -m {int(args.commands[0])} {int(args.commands[1])} {args.commands[2]} {args.commands[3]} "{args.commands[4]}" {args.commands[5]} {int(args.commands[6])}')
                     print(f"{args.monitoring}-Monitoring wurde gestartet")
-                    log("Log/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
+                    log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
+                    sys.exit()
+
+                else:
+                    subprocess.Popen(f'functions.exe start {args.monitoring} -m {int(args.commands[0])} {int(args.commands[1])} {args.commands[2]} {args.commands[3]} "{args.commands[4]}" {args.commands[5]} {int(args.commands[6])}')
+                    print(f"{args.monitoring}-Monitoring wurde gestartet")
+                    log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
                     sys.exit()
 
             except Exception as e:
                 print(f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
                 log("Logs/system.log", "error", f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
                 sys.exit()
+        
+        elif args.startstop == "start":
+            print("Art des Monitorings wurde nicht angegeben. Für Hilfe, öffne das Programm mit dem Parameter -h")
+            sys.exit()
+
+        elif args.startstop == "stop":
+            if os.path.isfile("Temp/processes.pickle"):
+                with open("Temp/processes.pickle", "rb") as p:
+                    processes = pickle.load(p)
+
+            try:
+                if args.monitoring == "all":
+                    for proc in processes.values():
+                        try:
+                            psutil.Process(proc).terminate()
+                        except:
+                            continue
+                    sys.exit()
+
+                psutil.Process(processes[args.monitoring]).terminate()
+                log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring mit der Prozess-ID {processes[args.monitoring]} wurde beendet")
+                del processes[args.monitoring]
+
+                with open("Temp/processes.pickle", "wb") as p:
+                    pickle.dump(processes, p)
+                sys.exit()
+
+            except Exception as e:
+                
+                print(f"Prozess konnte nicht beendet werden, da dieser nicht läuft.")
+                log("Logs/system.log", "error", f"Prozess konnte nicht beendet werden, da dieser nicht vorhanden ist")
+                sys.exit()
+
+            else:
+                print("Zurzeit ist kein Monitoring-Prozess am laufen.")
+                sys.exit()            
 
     else:
     
