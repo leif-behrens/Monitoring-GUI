@@ -85,7 +85,7 @@ class Monitoring(QMainWindow):
         # initialize Main Window
         self.initWindow()
 
-        # if the startup_config.ini - File exists the current_configuration initialiaze
+        # if the startup_config.ini - File exists the current_configuration initialize
         if os.path.isfile("startup_config.ini"):
             self.lb_timer = time.time()
 
