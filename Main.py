@@ -69,6 +69,9 @@ class Monitoring(QMainWindow):
         for drive in self.drives:
             self.drive_chosen[drive] = {"soft": "", "hard": ""}
 
+        # timer initialize
+        self.lb_timer = time.time()
+
         # Bool for checking if the login credentials of the mailaccount are valid
         self.mail_access = False    
 
