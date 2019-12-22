@@ -1313,7 +1313,7 @@ class Monitoring(QMainWindow):
         self.lb_graph_mon_cpu_avg_description.setText("CPU-Durchschnitt (60s):")
 
         self.lb_graph_mon_cpu_avg_value = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_cpu_avg_value.setGeometry(QRect(365, y, 50, self.lb_y_default))
+        self.lb_graph_mon_cpu_avg_value.setGeometry(QRect(380, y, 50, self.lb_y_default))
         y += 25
 
 
@@ -1329,7 +1329,7 @@ class Monitoring(QMainWindow):
         self.lb_graph_mon_ram_avg_description.setText("Arbeitsspeicher-Durchschnitt (60s):")
 
         self.lb_graph_mon_ram_avg_value = QLabel(self.tab_graph_mon)
-        self.lb_graph_mon_ram_avg_value.setGeometry(QRect(365, y, 50, self.lb_y_default))
+        self.lb_graph_mon_ram_avg_value.setGeometry(QRect(380, y, 50, self.lb_y_default))
         y += 25
 
 
