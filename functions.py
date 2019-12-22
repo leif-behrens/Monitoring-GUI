@@ -23,7 +23,6 @@ import win32api
 
 def log(file, logtype, msg):
     """
-    :param name: Name des Loggers
     :param file: Das File, wo der Log-Eintrag hingeschrieben wird
     :param logtype: e.g. Warning, Error, Critical etc
     :param msg: Zusätzliche Message/Informationen
