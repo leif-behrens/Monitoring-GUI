@@ -360,8 +360,8 @@ class Monitoring(QMainWindow):
                 psutil.disk_usage(disk)
             except Exception as e:
                 self.lb_error.setStyleSheet("color: red")
-                self.lb_error.setText(e)
-                log("Logs/monitoring.log", "info", "Überprüfung, ob alle Laufwerke erreichbar sind --> True")
+                self.lb_error.setText(str(e))
+                log("Logs/monitoring.log", "info", f"Laufwerk {disk}-Monitoring konnte nicht gestartet werden. Fehler: {e}")
                 return
 
             """
@@ -729,9 +729,14 @@ class Monitoring(QMainWindow):
         self.cb_drive_change()
 
     def cb_drive_change(self):
-        self.lb_total_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["total_GiB"]) + " GiB")
-        self.lb_used_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["used_GiB"]) + " GiB")
-        self.lb_free_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["free_GiB"]) + " GiB")
+        try:
+            self.lb_total_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["total_GiB"]) + " GiB")
+            self.lb_used_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["used_GiB"]) + " GiB")
+            self.lb_free_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["free_GiB"]) + " GiB")
+        except:
+            self.lb_total_value.setText("")
+            self.lb_used_value.setText("")
+            self.lb_free_value.setText("")
 
     def save_xml(self):
         data = QFileDialog.getSaveFileName(self, "Speichern", "", "XML (*.xml)")
@@ -1079,7 +1084,11 @@ class Monitoring(QMainWindow):
 
         self.lb_timer = time.time()
 
-        self.running_config()
+        current_config = self.current_config
+
+        if not self.running_config():
+            self.current_config = current_config
+            return
         try:
             shutil.copy("Temp/running_config.ini", "startup_config.ini")            
             self.lb_config_info.setStyleSheet("color: green")
@@ -1105,12 +1114,12 @@ class Monitoring(QMainWindow):
         if self.processes:
             self.lb_config_warnings.setText("Beende zunächst alle Monitorings.")
             log("Logs/system.log", "error", "current_config.ini konnte nicht geschrieben werden - monitorings müssen beendet sein")
-            return
+            return False
 
         if not self.mail_access:
             self.lb_config_warnings.setText("Validiere zunächst den Mailzugang.")
             log("Logs/system.log", "info", "current_config.ini konnte nicht geschrieben werden - Mailzugang muss zunächst validiert werden")
-            return
+            return False
 
         must_have_inputs = []
         warn_msg_lb = "|"
@@ -1351,70 +1360,72 @@ class Monitoring(QMainWindow):
         y += 25
 
     def refresh_current_utilization(self):
-        cpu = psutil.cpu_percent()
-        ram = round(get_virtual_memory()["percent"], 2)
-        processes = len(psutil.pids())
-        system_time = round(time.time() - self.start_system_time)
+        try:
+            cpu = psutil.cpu_percent()
+            ram = round(get_virtual_memory()["percent"], 2)
+            processes = len(psutil.pids())
+            system_time = round(time.time() - self.start_system_time)
 
 
-        self.cpu_values.append(cpu)
-        self.ram_values.append(ram)
-        self.systemtime_values.append(system_time)
+            self.cpu_values.append(cpu)
+            self.ram_values.append(ram)
+            self.systemtime_values.append(system_time)
 
-        if len(self.cpu_values) > 60:
-            del self.cpu_values[0]
-            del self.ram_values[0]
-            del self.systemtime_values[0]
-        
-        cpu_avg = round(sum(self.cpu_values)/len(self.cpu_values), 2)
-        ram_avg = round(sum(self.ram_values)/len(self.ram_values), 2)
+            if len(self.cpu_values) > 60:
+                del self.cpu_values[0]
+                del self.ram_values[0]
+                del self.systemtime_values[0]
+            
+            cpu_avg = round(sum(self.cpu_values)/len(self.cpu_values), 2)
+            ram_avg = round(sum(self.ram_values)/len(self.ram_values), 2)
 
-        with open("Temp/cpu.pickle", "wb") as p:
-            pickle.dump([self.systemtime_values, self.cpu_values], p)
+            with open("Temp/cpu.pickle", "wb") as p:
+                pickle.dump([self.systemtime_values, self.cpu_values], p)
 
-        with open("Temp/ram.pickle", "wb") as p:
-            pickle.dump([self.systemtime_values, self.ram_values], p)
+            with open("Temp/ram.pickle", "wb") as p:
+                pickle.dump([self.systemtime_values, self.ram_values], p)
 
-        self.lb_graph_mon_cpu_value.setText(str(cpu) + " %")
-        self.lb_graph_mon_ram_value.setText(str(ram) + " %")
-        self.lb_graph_mon_processes_value.setText(str(processes))
-        self.lb_graph_mon_system_time_value.setText(str(system_time) + " s")
-        self.lb_graph_mon_cpu_avg_value.setText(str(cpu_avg) + " %")
-        self.lb_graph_mon_ram_avg_value.setText(str(ram_avg) + " %")
+            self.lb_graph_mon_cpu_value.setText(str(cpu) + " %")
+            self.lb_graph_mon_ram_value.setText(str(ram) + " %")
+            self.lb_graph_mon_processes_value.setText(str(processes))
+            self.lb_graph_mon_system_time_value.setText(str(system_time) + " s")
+            self.lb_graph_mon_cpu_avg_value.setText(str(cpu_avg) + " %")
+            self.lb_graph_mon_ram_avg_value.setText(str(ram_avg) + " %")
 
-        if time.time() - self.lb_timer >= 3:
-            self.lb_config_warnings.clear()
-            self.lb_error.clear()
-            self.lb_config_info.clear()
-            self.lb_status.clear()
-            self.lb_info_saved.clear()
+            if time.time() - self.lb_timer >= 3:
+                self.lb_config_warnings.clear()
+                self.lb_error.clear()
+                self.lb_config_info.clear()
+                self.lb_status.clear()
+                self.lb_info_saved.clear()
 
-        if "CPU" in self.monitoring:
-            soft = int(self.current_config["limits"]["cpu"]["soft"])
-            hard = int(self.current_config["limits"]["cpu"]["hard"])
+            if "CPU" in self.monitoring:
+                soft = int(self.current_config["limits"]["cpu"]["soft"])
+                hard = int(self.current_config["limits"]["cpu"]["hard"])
 
-            if soft <= cpu < hard:
-                self.lb_graph_mon_cpu_value.setStyleSheet("color: orange")
-            elif cpu >= hard:
-                self.lb_graph_mon_cpu_value.setStyleSheet("color: red")
+                if soft <= cpu < hard:
+                    self.lb_graph_mon_cpu_value.setStyleSheet("color: orange")
+                elif cpu >= hard:
+                    self.lb_graph_mon_cpu_value.setStyleSheet("color: red")
+                else:
+                    self.lb_graph_mon_cpu_value.setStyleSheet("color: green")
             else:
-                self.lb_graph_mon_cpu_value.setStyleSheet("color: green")
-        else:
-            self.lb_graph_mon_cpu_value.setStyleSheet("color: black")
+                self.lb_graph_mon_cpu_value.setStyleSheet("color: black")
 
-        if "Arbeitsspeicher" in self.monitoring:
-            soft = int(self.current_config["limits"]["ram"]["soft"])
-            hard = int(self.current_config["limits"]["ram"]["hard"])
+            if "Arbeitsspeicher" in self.monitoring:
+                soft = int(self.current_config["limits"]["ram"]["soft"])
+                hard = int(self.current_config["limits"]["ram"]["hard"])
 
-            if soft <= ram < hard:
-                self.lb_graph_mon_ram_value.setStyleSheet("color: orange")
-            elif ram >= hard:
-                self.lb_graph_mon_ram_value.setStyleSheet("color: red")
+                if soft <= ram < hard:
+                    self.lb_graph_mon_ram_value.setStyleSheet("color: orange")
+                elif ram >= hard:
+                    self.lb_graph_mon_ram_value.setStyleSheet("color: red")
+                else:
+                    self.lb_graph_mon_ram_value.setStyleSheet("color: green")
             else:
-                self.lb_graph_mon_ram_value.setStyleSheet("color: green")
-        else:
-            self.lb_graph_mon_ram_value.setStyleSheet("color: black")
-        
+                self.lb_graph_mon_ram_value.setStyleSheet("color: black")
+        except Exception as e:
+            log("Logs/system.log", "error", f"Aktualisierung des Live-Graphen nicht erfolgreich. Fehler: {e}")
 
 class PlotCanvas(FigureCanvas):
 
