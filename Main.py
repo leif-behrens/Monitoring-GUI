@@ -17,10 +17,9 @@ import subprocess
 from pathlib import Path
 
 # 3rd party libraries
-from PyQt5 import QtGui
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QRect, QTimer
-from PyQt5.QtGui import QIcon, QTextCursor, QFont
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -36,13 +35,14 @@ from functions import *
 
 class Monitoring(QMainWindow):
     """
-    Name-convention:
+    Namenskonvention der Labels:
     tab_* -> QTabWidget
     lb_* -> QLabel
     btn_* -> QPushButton
     le_* -> QLineEdit
     lw_* -> QListWidget
     cb_* -> QComboBox
+    tb_* -> QTextBrowser
     """
     def __init__(self):
         log("Logs/system.log", "info", "Programm gestartet")
@@ -227,7 +227,7 @@ class Monitoring(QMainWindow):
         
         # Mainwindow Einstellungen
         self.setWindowTitle(self.title)
-        self.setWindowIcon(QtGui.QIcon(self.icon))
+        self.setWindowIcon(QIcon(self.icon))
         self.setFixedSize(self.width, self.height)
 
         # Tabwidget erstellt
@@ -844,7 +844,7 @@ class Monitoring(QMainWindow):
 
         self.tb_logs_system_logs = QTextBrowser(self.tab_logs_system_logs)
         self.tb_logs_system_logs.setGeometry(QRect(15, 15, self.width-40, self.height-80))
-        self.tb_logs_system_logs.moveCursor(QtGui.QTextCursor.End)
+        self.tb_logs_system_logs.moveCursor(QTextCursor.End)
 
 
         self.tab_logs_monitoring_logs = QWidget()
@@ -852,7 +852,7 @@ class Monitoring(QMainWindow):
 
         self.tb_logs_monitoring_logs = QTextBrowser(self.tab_logs_monitoring_logs)
         self.tb_logs_monitoring_logs.setGeometry(QRect(15, 15, self.width-40, self.height-80))
-        self.tb_logs_monitoring_logs.moveCursor(QtGui.QTextCursor.End)
+        self.tb_logs_monitoring_logs.moveCursor(QTextCursor.End)
 
         
         self.tab_logs_threshold_limits = QWidget(self.tab_logs_all)
@@ -860,7 +860,7 @@ class Monitoring(QMainWindow):
         
         self.tb_logs_threshold_limits = QTextBrowser(self.tab_logs_threshold_limits)
         self.tb_logs_threshold_limits.setGeometry(QRect(15, 15, self.width-40, self.height-80))
-        self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
+        self.tb_logs_threshold_limits.moveCursor(QTextCursor.End)
         
         # Sobald man den Tab wechselt, wird die Methode self.push_logs aufgerufen
         self.tab_logs_all.currentChanged.connect(self.push_logs)
@@ -875,14 +875,14 @@ class Monitoring(QMainWindow):
                 with open(logs_path) as f:
                     logs = f.read()
                     self.tb_logs_system_logs.setText(logs)
-                    self.tb_logs_system_logs.moveCursor(QtGui.QTextCursor.End)
+                    self.tb_logs_system_logs.moveCursor(QTextCursor.End)
             
             logs_path = "Logs/monitoring.log"
             if os.path.isfile(logs_path):
                 with open(logs_path) as f:
                     logs = f.read()
                     self.tb_logs_monitoring_logs.setText(logs)
-                    self.tb_logs_monitoring_logs.moveCursor(QtGui.QTextCursor.End)
+                    self.tb_logs_monitoring_logs.moveCursor(QTextCursor.End)
 
             
             logs_path = "Logs/limits.log"
@@ -890,7 +890,7 @@ class Monitoring(QMainWindow):
                 with open(logs_path) as f:
                     logs = f.read()
                     self.tb_logs_threshold_limits.setText(logs)
-                    self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
+                    self.tb_logs_threshold_limits.moveCursor(QTextCursor.End)
                                                 
         except:
             pass
