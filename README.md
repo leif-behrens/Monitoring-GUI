@@ -18,7 +18,7 @@ Das Monitoring hat unterschiedliche Funktionen, bestehend aus 5 Tabs.
 - Interface zum Starten der unterschiedlichen Monitorings
     - Überwachung CPU-Auslastung
     - Überwachung Arbeitsspeicher-Auslastungen
-    - Festplattenmonitoring für jedes seperate Laufwerk (z. B. Laufwerk C, D, E etc.)
+    - Festplattenmonitoring für jedes separate Laufwerk (z. B. Laufwerk C, D, E etc.)
 - Starten der unterschiedlichen Monitorings, wenn zuvor die entsprechenden **Schwellenwerte** (Soft- und Hardlimit) konfiguriert wurden
 - Die Laufenden Monitorings werden auf diesem Interface angezeigt
 
@@ -46,8 +46,7 @@ Das Monitoring hat unterschiedliche Funktionen, bestehend aus 5 Tabs.
 
 #### Nicht-optionale Eingaben
 
-- Pfad der (Schwellenwert-Überschreitung)-Logs
-- Empfänger-Mailadresse(n)
+- Empfänger-Mailadresse
 - Mail-Zugangsdaten
     - Email-Adresse
     - Passwort
