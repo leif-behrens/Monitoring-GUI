@@ -34,73 +34,86 @@ from functions import *
 
 
 class Monitoring(QMainWindow):
+    """
+    Name-convention:
+    tab_* -> QTabWidget
+    lb_* -> QLabel
+    btn_* -> QPushButton
+    le_* -> QLineEdit
+    lw_* -> QListWidget
+    cb_* -> QComboBox
+    """
     def __init__(self):
         super().__init__()
         
+        # Titel des Programms
         self.title = "Monitoring"
         self.icon = "Images/Icon.png"
         
         self.width = 1000
         self.height = 600
 
-        # default labelsizes
+        # Standard Labelgröße
         self.lb_x_default = 200
         self.lb_y_default = 25
 
-        # system-starttime 
+        # Timestamp, sobald das Programm aufgerufen wird
         self.start_system_time = time.time()
 
-        # values for the graph
+        # Listen für die Werte, die die Graphen benötigen
         self.cpu_values = []
         self.ram_values = []
         self.systemtime_values = []
 
-        # {<name of monitoring>: <PID>}
+        # {<Name des Monitoring>: <PID>}
         self.processes = {}
 
-        # List with the names of monitorings for the current running monitorings (QListWigdet)
+        # (sichtbare) Namen der Laufenden Monitorings. Werden im Monitoring-Tab für das QListWidget benötigt
         self.monitoring = []
 
-        # List with all drives
+        # Eine Liste mit allen vorhandenen Laufwerken)
         self.drives = get_pc_information()["drives"]
 
-        # dictionary for the soft- and hardlimits
+        # Dictionary, wo bereits alle Laufwerke mit Soft- und Hardlimit vorkonfiguriert sind
         self.drive_chosen = {}  
         for drive in self.drives:
             self.drive_chosen[drive] = {"soft": "", "hard": ""}
 
-        # timer initialize
+        # Timestamp, der zum clearen der Status- und Errorlabels zuständig ist
         self.lb_timer = time.time()
 
-        # Bool for checking if the login credentials of the mailaccount are valid
+        # Boolean zum checken, ob der Mailaccount validiert ist
         self.mail_access = False    
 
         log("Logs/system.log", "info", "Programm gestartet")
 
-        # QTimer - for refreshing values every second
+        # Initialisierung des QTimers, der sich sekündlich aktualisiert und dafür sorgt, dass die Graphen aktualisiert werden
         self.timer_refresh_current_utilization = QTimer(self)
         self.timer_refresh_current_utilization.timeout.connect(self.refresh_current_utilization)
         self.timer_refresh_current_utilization.start(1000)
         
-        # initialize Main Window
+        # Mainwindows sowie alle Tab-Widgets werden in der self.initWindow()-Methode initialisiert
         self.initWindow()
 
-        # if the startup_config.ini - File exists the current_configuration initialize
+        # Es wird geschaut, ob die Datai startup_config.ini im Ordner existiert. Wenn ja, wird versucht die aktuelle Konfiguration zu laden
         if os.path.isfile("startup_config.ini"):
             self.lb_timer = time.time()
-
+            
+            # Hier wird mit Try-Except gearbeitet, da der User eventuell die Config-Datei manuell anpassen könnte, die ggf. zum Programmabsturz führen
             try:
                 self.current_config = {"username": "",
                                        "password": "",
                                        "server": "",
                                        "port": "",
-                                       "mail_receiver": [],
+                                       "mail_receiver": "",
                                        "attachment": None,
                                        "limits": {}}
-
-                # parsing through the config-file
-                # parses through all sections of the config file, sets the values to the "self.current_config"-dictionary and fills the
-                # line-edits and combo-boxes with the values, that are written in the config file.
+                
+                """
+                Es wird nun durch das Konfigfile geparsed
+                Es werden alle Sections durchgangen und die Werte der Datei werden dem self.current_config-dictionary zugeordnet sowie
+                die QLineEdits und QComboBoxen werden mit den Werten gefüllt
+                """
                 parser = ConfigParser()
                 parser.read("startup_config.ini")
 
@@ -115,22 +128,14 @@ class Monitoring(QMainWindow):
                 self.le_mail_server.setText(self.current_config["server"])
                 self.le_mail_server_port.setText(str(self.current_config["port"]))
 
-                self.le_mail_server.setDisabled(True)
-                self.le_mail_server_port.setDisabled(True)
-                self.le_mail_sender.setDisabled(True)
-                self.le_mail_password.setDisabled(True)
                 self.mail_access = True
 
 
-                # Section "DEFAULT"
-                mail_addresses = (parser["DEFAULT"]["mailadressen"]).split(";")
-                for mail in mail_addresses:
-                    self.current_config["mail_receiver"].append(mail)
+                # Section "DEFAULT"               
+                self.current_config["mail_receiver"] = parser["DEFAULT"]["mailadressen"]
                 self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
                 
-                self.le_mail_receiver.setText((";").join(self.current_config["mail_receiver"]))
-
-                self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
+                self.le_mail_receiver.setText(self.current_config["mail_receiver"])
                 
                 if self.current_config["attachment"]:
                     self.cb_attachment_sent.setCurrentText("Ja")
@@ -155,29 +160,43 @@ class Monitoring(QMainWindow):
                 self.cb_drives_limits_refresh()
 
                 shutil.copy("startup_config.ini", "Temp/running_config.ini")
-
+            
+            # Sollten irgendwelche Werte/Sections nicht gefunden werden, so wird die Fehlermeldung in rot auf das Warnlabel geschrieben, ein Logeintrag
+            # erstellt, self.current_config auf None gesetzt und die alle Widgets gecleared
             except Exception as e:
                 self.lb_config_warnings.setStyleSheet("color: red")
                 self.lb_config_warnings.setText(f"{e}")
                 self.current_config = None
+                
+                self.le_mail_sender.clear()
+                self.le_mail_password.clear()
+                self.le_mail_server.clear()
+                self.le_mail_server_port.clear()
+                self.le_mail_receiver.clear()
+                self.cb_cpu_softlimit.clear()
+                self.cb_ram_softlimit.clear()
+                self.drive_chosen.clear()
                 log("Logs/system.log", "error", f"Initialisierung Temp/running_config schlug fehl: {e}")
-
+        
+        # Sollte die startup_config.ini nicht existieren, wird self.current_config auf None gesetzt und ein Info-Log geschrieben
         else:
             self.current_config = None
             log("Logs/system.log", "info", f"current_config.ini existiert nicht")
 
     def closeEvent(self, event):
         """
-        If closing the window
+        Geerbte Methode vom QMainWindow, die hier überschrieben wird
+        Sobald der User das Fenster schließt, werden alle temporären Dateien gelöscht, existierende Monitoringprozesse gekillt
+        und ein Logeinträge geschrieben
         """
 
         try:
-            # Delete running_config.ini File
+            # Lösche running_config.ini Datei
             if os.path.isfile("Temp/running_config.ini"):
                 os.remove("Temp/running_config.ini")
                 log("Logs/system.log", "info", "Temp/running_config.ini-Datei wurde gelöscht")
 
-            # Kill all (monitoring) processes
+            # Kill alle Monitoring-Prozesse
             for mon, pid in self.processes.items():
                 try:
                     psutil.Process(pid).terminate()
@@ -185,7 +204,7 @@ class Monitoring(QMainWindow):
                 except:
                     log("Logs/monitoring.log", "error", f"{mon}-Monitoring mit der Prozess-ID {pid} war bereits beendet")
             
-            # Delete all pickle-Files
+            # Lösche alle *.pickle Files (die die Werte für die Live-Graphen in Listen gespeichert haben)
             for f in glob.glob("Temp/*.pickle"):
                 if f == "Temp\processes.pickle":
                     continue
@@ -195,10 +214,14 @@ class Monitoring(QMainWindow):
         except Exception as e:
             log("Logs/system.log", "debug", f"Programm beenden - Folgender Fehler ist aufgetreten: {e}")
         
-        else:
+        finally:
             log("Logs/system.log", "info", f"Programm nach {round(time.time()-self.start_system_time, 2)} Sekunden beendet")
             
     def initWindow(self):
+        """
+        Initialisierung des Mainwindows sowie die unterschiedlichen Tabs. Zuletzt wird die GUI angezeigt (show)
+        """
+        
         # Mainwindow Einstellungen
         self.setWindowTitle(self.title)
         self.setWindowIcon(QtGui.QIcon(self.icon))
@@ -220,19 +243,17 @@ class Monitoring(QMainWindow):
 
     def initMonitoring(self):
         """
-        Setup all the different widget. 
-        Name-convention:
-        tab_* -> QTabWidget
-        lb_* -> QLabel
-        btn_* -> QPushButton
-        le_* -> QLineEdit
-        lw_* -> QListWidget
+        Methode zum initialisierung des Layouts für das Monitoring-Tab
+        Alle Widgets werden initialisiert und die Buttons mit einer Methode gebinded        
         """
-
+        
+        # Ein neuer Tab wird dem tabWidget hinzugefügt
         self.tab_monitoring = QWidget()
         self.tabWidget.addTab(self.tab_monitoring, "Monitoring")
-
+        
+        # y ist nur ein Zähler, um die Widgets an einer bestimmten Position zu setzen (mit setGeometry)
         y = 15
+        
         self.lb_cpu_start_stop = QLabel(self.tab_monitoring)
         self.lb_cpu_start_stop.setGeometry(QRect(15, y, self.lb_x_default, self.lb_y_default))
         self.lb_cpu_start_stop.setText("CPU-Monitoring")
@@ -259,7 +280,8 @@ class Monitoring(QMainWindow):
 
         self.cb_disk_mon = QComboBox(self.tab_monitoring)
         self.cb_disk_mon.setGeometry(QRect(150, y, 40, self.lb_y_default))
-
+        
+        # Alle Laufwerke werden der QComboBox hinzugefügt
         for drive in self.drives:
             self.cb_disk_mon.addItem(drive)
     
@@ -275,34 +297,38 @@ class Monitoring(QMainWindow):
         self.lw_processes.setGeometry(QRect(15, 165, 125, 200))
         
         self.lb_error = QLabel(self.tab_monitoring)
-        self.lb_error.setGeometry(QRect(15, self.height-50, self.width-50, self.lb_y_default))
+        self.lb_error.setGeometry(QRect(15, self.height-50, self.width-30, self.lb_y_default))
         self.lb_error.setStyleSheet("color: red")
 
         self.lb_status = QLabel(self.tab_monitoring)
-        self.lb_status.setGeometry(QRect(15, self.height-100, self.width-50, self.lb_y_default))
+        self.lb_status.setGeometry(QRect(15, self.height-100, self.width-30, self.lb_y_default))
         self.lb_status.setStyleSheet("color: green")
 
-        # Connect buttons and combobox to methods
-        self.btn_cpu_start_stop.clicked.connect(self.start_cpu)
-        self.btn_ram_start_stop.clicked.connect(self.start_ram)
+        # Buttons bekommen jeweils eine Methode zugewiesen. Sobald man auf die Buttons klickt, wird diese Methode aufgerufen
+        # Da den Methoden Argumente übergeben werden, musste ich hier mit der lambda-Funktion arbeiten
+        self.btn_cpu_start_stop.clicked.connect(lambda: self.start("cpu", "CPU", self.btn_cpu_start_stop, mon_cpu))
+        self.btn_ram_start_stop.clicked.connect(lambda: self.start("ram", "Arbeitsspeicher", self.btn_ram_start_stop, mon_memory))
         self.btn_disk_start_stop.clicked.connect(lambda: self.start_disk(self.cb_disk_mon.currentText()))
+        
+        # ComboBox wird ebenfalls einer Methode zugewiesen. Sobald sich dort der Text ändert, wird diese Methode aufgerufen
         self.cb_disk_mon.currentTextChanged.connect(lambda: self.cb_disk_mon_change(self.cb_disk_mon.currentText()))
-
-    def start_cpu(self):
-        self.start("cpu", "CPU", self.btn_cpu_start_stop, mon_cpu)
-       
-    def start_ram(self):
-        self.start("ram", "Arbeitsspeicher", self.btn_ram_start_stop, mon_memory)
 
     def start_disk(self, disk):
         """
-        :param disk: current chosen disk in the combobox
+        :param disk: String -> Festplatte, für das das Monitoring gestartet werden soll
         """
         
         self.lb_timer = time.time()
 
-        # Only if the current_config is initialized you can start monitoring
+        # Erst wird geschaut, ob self.current_config nicht None ist. Monitorings können nur gestartet werden, wenn eine Konfiguration
+        # vorhanden ist
         if self.current_config is not None:
+            """
+            In dem Try-Except-Block wird versucht, die aktuelle Konfigurations zu laden und in Variablen zu speichern.
+            Es wird versucht, die Soft- und Hardlimits in einen Integer zu konvertieren. Sollten die Limits für diese 
+            Festplatte nicht konfiguriert sein, wird eine KeyError Exception geraised und die Funktion wird mit return beendet.
+            Um ein Monitoring zu starten müssen vorher die entsprechenden Limits konfiguriert sein.
+            """
             try:
                 username = self.current_config["username"]
                 pwd = base64.b64decode(self.current_config["password"]).decode("utf-8")
@@ -314,7 +340,7 @@ class Monitoring(QMainWindow):
 
                 soft = int(self.current_config["limits"][disk]["soft"])
                 hard = int(self.current_config["limits"][disk]["hard"])
-
+                
             except KeyError:
                 self.lb_error.setText(f"{disk}-Limits sind nicht konfiguriert.")
                 log("Logs/system.log", "error", f"Starten Laufwerk {disk}-Monitorings schlug fehl. Limits sind nicht konfiguriert")
@@ -324,18 +350,18 @@ class Monitoring(QMainWindow):
                 self.lb_error.setText(f"Fehler: {e}")
                 log("Logs/system.log", "error", f"Aktuelle Konfiguration konnte nicht initiiert werden. Fehler: {e}")
                 return
-
+            
+            # Wenn es zu keinem Error kam, wird zunächst das Listwidget, wo alle Monitoring-Beschreibungen enthalten sind, 
+            # gecleared
             self.lw_processes.clear()
 
             """
-            Check if the monitoring for the current disk is running
-            if True -> Stop monitoring of this disk, the button-text change to "Start",
-            status_label-text changed, remove item from the list (for the Listwidget) and
-            remove item from the dictionary with the running processes. 
-            iterate through the monitoring list and set all the items of monitoring-list 
-            to the listwidget
-            After this return so the rest of this method will not be executed
-            """
+            In der folgenden Routine wird überprüft, ob das Monitoring für diese Festplatte bereits läuft.
+            Wenn ja, wird das Monitoring gestoppt und der Buttontext ändert sich zu "Start", der Text des Statuslabels
+            ändert sich, das Item wird von der self.monitoring-Liste entfernt. Anschließend wird über die self.monitoring-Liste
+            iteriert und das Listwidget erhält alle Items (also alle Monitorings, die gerade laufen). Anschließend wird returnt,
+            sodass der Rest der Methode nicht mehr ausgeführt wird
+            """           
             for d, p in self.processes.items():
                 if disk == d:
                     try:
@@ -355,26 +381,30 @@ class Monitoring(QMainWindow):
                 else:
                     continue
             
+            """
+            Wenn kein Prozess für dieses Monitoring läuft, wird zunächst versucht, ob ein Zugriff auf das Laufwerk möglich ist.
+            Falls es sich beispielsweise um ein Netzlaufwerk handelt, dass nicht erreichbar oder um ein CD-Laufwerk, wo keine
+            DVD enthalten ist, würde es an dieser Stelle zu einem Prozessabbruch kommen und das Programm wird mit einem Error 
+            beendet (habe ich beides ausgetestet)
+            """
             try:
-                # Check if disk is available (in case it's a network disk which is disconnected)
                 psutil.disk_usage(disk)
             except Exception as e:
+                for mon in self.monitoring:
+                    self.lw_processes.addItem(mon)
                 self.lb_error.setStyleSheet("color: red")
                 self.lb_error.setText(str(e))
-                log("Logs/monitoring.log", "info", f"Laufwerk {disk}-Monitoring konnte nicht gestartet werden. Fehler: {e}")
+                log("Logs/monitoring.log", "error", f"Laufwerk {disk} konnten nicht gestartet werden. Fehler: {e}")
                 return
 
-            """
-            If the monitoring for this disk is not running:
-            status label changed, button-name set to "Stop", append the description of the monitoring to 
-            the monitoring list, starts a seperate monitoring process and creates a new dictionary entry 
-            with the name of the process and the PID
-            iterate through the monitoring list and set all the items of monitoring-list 
-            to the listwidget
+            """           
+            Wenn das Monitoring für das Laufwerk nicht läuft und es auch erreichbar ist, wird versucht, das Monitoring
+            für das Laufwerk zu starten. Der Buttonname wird wird auf "Stopp" gesetzt, self.monitoring ergänzt, das Listwidget 
+            gefüllt und ein Logeintrag geschrieben
             """
             try:
                 process = multiprocessing.Process(target=mon_disk, 
-                                                args=(disk, mail_receiver, attachment, soft, 
+                                                args=(disk, [mail_receiver], attachment, soft, 
                                                         hard, username, pwd, server, port))
                 process.start()
                 self.processes[disk] = process.pid
@@ -391,13 +421,16 @@ class Monitoring(QMainWindow):
             except Exception as e:
                 log("Logs/monitoring.log", "error", f"Laufwerk {disk}-Monitoring konnte nicht gestartet werden. Fehler: {e}")
 
+        # Falls keine Konfiguration vorhanden ist, wird das Errorlabel mit einer Meldung versehen und ein Logeintrag geschrieben
         else:
-            self.lb_error.setText("Wähle zuerst eine Konfiguration.")
+            self.lb_error.setText("Keine Konfiguration vorhanden")
             log("Logs/monitoring.log", "info", f"Laufwerk {disk}-Monitoring konnte nicht gestartet werden - keine Konifguration vorhanden")
 
     def cb_disk_mon_change(self, disk):
         """
-        Changes the button text to "Stopp" or "Start" whether the monitoring for the current chosen disk is started or not
+        Methode die aufgerufen wird, sobald ein User im Monitoring-Tab den Wert der Combobox mit den Laufwerken ändert.
+        Es wird überprüft, ob das Monitoring für das Laufwerk läuft oder nicht. Wenn ja, wird der Text des Buttons zum Starten des
+        Monitorings auf "Stopp" gesetzt, anderenfalls auf "Start"
         """
         if self.current_config is not None:
 
@@ -410,20 +443,26 @@ class Monitoring(QMainWindow):
 
     def start(self, typ, description, btn, function):
         """
-        :param typ: String -> "cpu" or "ram". This is the description for the processes-key
-        :param description: String -> Description the the current running processes (for the List-Widget)
-        :param btn: QPushButton-Object to change the text of the button
-        Start for either cpu-monitoring or ram-monitoring
+        :param typ: String -> "cpu" oder "ram" wird erwartet (kommt drauf an, welcher Button gedrückt wurde)
+        :param description: String -> Beschreibung des Prozesses für das ListWidget
+        :param btn: QPushButton-Objekt, um den Text des Buttons zu ändern (Start oder Stopp)
+        :param function: Function-Objekt, das zum Aufruf des Monitorings ist
         """
 
-        # Initialize errorlabel und statuslabel
+        # Initialieren des Error- und Statuslabels
         self.lb_error.clear()
         self.lb_status.clear()
         self.lb_timer = time.time()
         
-        # Only if the current_config is initialized you are able to start the monitoring
+        # Erst wird geschaut, ob self.current_config nicht None ist. Monitorings können nur gestartet werden, wenn eine Konfiguration
+        # vorhanden ist
         if self.current_config is not None:
-
+            """
+            In dem Try-Except-Block wird versucht, die aktuelle Konfigurations zu laden und in Variablen zu speichern.
+            Es wird versucht, die Soft- und Hardlimits in einen Integer zu konvertieren. Sollten die Limits nicht konfiguriert 
+            sein, wird eine KeyError Exception geraised und die Funktion wird mit return beendet. Um ein Monitoring zu starten 
+            müssen vorher die entsprechenden Limits konfiguriert sein.
+            """
             try:
                 username = self.current_config["username"]
                 pwd = base64.b64decode(self.current_config["password"]).decode("utf-8")
@@ -449,13 +488,11 @@ class Monitoring(QMainWindow):
             self.lw_processes.clear()
             
             """
-            Check if the monitoring for is running
-            if True -> Stop monitoring , the button-text change to "Start",
-            status_label-text changed, remove item from the list (for the Listwidget) and
-            remove item from the dictionary with the running processes. 
-            iterate through the monitoring list and set all the items of monitoring-list 
-            to the listwidget
-            After this return so the rest of this method will not be executed
+            In der folgenden Routine wird überprüft, ob das Monitoring bereits läuft.
+            Wenn ja, wird das Monitoring gestoppt und der Buttontext ändert sich zu "Start", der Text des Statuslabels
+            ändert sich, das Item wird von der self.monitoring-Liste entfernt. Anschließend wird über die self.monitoring-Liste
+            iteriert und das Listwidget erhält alle Items (also alle Monitorings, die gerade laufen). Anschließend wird returnt,
+            sodass der Rest der Methode nicht mehr ausgeführt wird
             """
             for d, p in self.processes.items():
                 if typ == d:
@@ -474,13 +511,9 @@ class Monitoring(QMainWindow):
                 else:
                     continue
 
-            """
-            If the monitoring is not running:
-            status label changed, button-name set to "Stop", append the description of the monitoring to 
-            the monitoring list, starts a seperate monitoring process and creates a new dictionary entry 
-            with the name of the process and the PID
-            iterate through the monitoring list and set all the items of monitoring-list 
-            to the listwidget
+            """           
+            Wenn das Monitoring nicht läuft, wird versucht, das Monitoring für das Laufwerk zu starten. Der Buttonname wird auf 
+            "Stopp" gesetzt, self.monitoring ergänzt, das Listwidget gefüllt und ein Logeintrag geschrieben            
             """
             try:
                 self.lb_status.setText(f"Starte {description}-Monitoring")
@@ -488,7 +521,7 @@ class Monitoring(QMainWindow):
                 self.monitoring.append(description)
 
                 process = multiprocessing.Process(target=function, 
-                                                args=(mail_receiver, attachment, soft, hard, 
+                                                args=([mail_receiver], attachment, soft, hard, 
                                                         username, pwd, server, port))
                 process.start()
                 self.processes[typ] = process.pid
@@ -507,13 +540,14 @@ class Monitoring(QMainWindow):
 
     def initComputerinformation(self):
         """
-        Initializing the "Computerinformationen"-Tab and sets all the values 
+        Initialisierung des "Computerinformationen"-Tabs
+        Alle Werte werden den Labels hinzugefügt
         """
 
         self.pc_info = get_pc_information()
         self.lb_x_value = 400
         
-        # set the computerinformation to variables
+        # Computerinformationen in Variablen schreiben
         self.current_user = self.pc_info["current_user"]
         self.hostname = self.pc_info["hostname"]
         self.boot_time = datetime.datetime.fromtimestamp(psutil.boot_time()).strftime("%d.%m.%Y %H:%M:%S")
@@ -527,7 +561,8 @@ class Monitoring(QMainWindow):
         self.memory = self.pc_info["memory"]
         self.drives = self.pc_info["drives"] 
 
-        # set the information a dictionary in case the user wants to save the information to a xml or json file
+        # Informationen in ein Dictionary schreiben, da die Informationen ggf. benötigt werden, sobald ein User
+        # die Informationen als XML oder JSON Datei abspeichern möchte
         self.computerinfo = {"timestamp": time.strftime('%d.%m.%y %H:%M:%S'),
                              "current_user": self.current_user, 
                              "hostname": self.hostname,
@@ -542,10 +577,14 @@ class Monitoring(QMainWindow):
                              "drives": {}}
         
         for drive in self.drives:
-            self.computerinfo["drives"][drive] = {"total_GiB": get_disk_usage(drive)["total"],
-                                                  "used_GiB": get_disk_usage(drive)["used"],
-                                                  "free_GiB": get_disk_usage(drive)["free"]}
-
+            try:
+                self.computerinfo["drives"][drive] = {"total_GiB": get_disk_usage(drive)["total"],
+                                                      "used_GiB": get_disk_usage(drive)["used"],
+                                                      "free_GiB": get_disk_usage(drive)["free"]}
+            except:
+                continue
+        
+        # Variable für y-Positionierung
         y = 15
                         
         self.tab_computerinformation = QWidget()
@@ -709,7 +748,7 @@ class Monitoring(QMainWindow):
 
         
         self.lb_info_saved = QLabel(self.tab_computerinformation)
-        self.lb_info_saved.setGeometry(QRect(15, self.height-100, self.width, self.lb_y_default))
+        self.lb_info_saved.setGeometry(QRect(15, self.height-100, self.width-30, self.lb_y_default))
         self.lb_info_saved.setStyleSheet("color: green")
 
         self.btn_save_xml = QPushButton(self.tab_computerinformation)
@@ -729,6 +768,9 @@ class Monitoring(QMainWindow):
         self.cb_drive_change()
 
     def cb_drive_change(self):
+        """
+        Methode wird aufgerufen, wenn sich der Text der Combobox im Computerinformationen-Tab wechselt
+        """
         try:
             self.lb_total_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["total_GiB"]) + " GiB")
             self.lb_used_value.setText(str(self.computerinfo["drives"][self.cb_drive.currentText()]["used_GiB"]) + " GiB")
@@ -737,8 +779,14 @@ class Monitoring(QMainWindow):
             self.lb_total_value.setText("")
             self.lb_used_value.setText("")
             self.lb_free_value.setText("")
-
+    
     def save_xml(self):
+        """
+        Methode wird aufgerufen, sobald ein User den self.btn_save_xml-Button im Computerinformationen-Tab
+        klickt. Es öffnet sich ein QFileDialog, wo der User die Möglichkeit hat, den und Namen auszuwählen, 
+        wo die Datei gespeichert werden soll
+        """
+        
         data = QFileDialog.getSaveFileName(self, "Speichern", "", "XML (*.xml)")
 
         xml = dicttoxml.dicttoxml(self.computerinfo)
@@ -755,8 +803,14 @@ class Monitoring(QMainWindow):
         
         except Exception as e:
             log("Logs/system.log", "error", f"Computerinformationen konnte nicht als json unter {data[0]} gespeichert werden. Fehler: {e}")
-
+        
+        
     def save_json(self):
+        """
+        Methode wird aufgerufen, sobald ein User den self.btn_save_json-Button im Computerinformationen-Tab
+        klickt. Es öffnet sich ein QFileDialog, wo der User die Möglichkeit hat, den und Namen auszuwählen, 
+        wo die Datei gespeichert werden soll
+        """
         data = QFileDialog.getSaveFileName(self, "Speichern", "", "JSON (*.json)")
         
         self.lb_timer = time.time()
@@ -772,6 +826,9 @@ class Monitoring(QMainWindow):
             log("Logs/system.log", "error", f"Computerinformationen konnte nicht als xml unter {data[0]} gespeichert werden. Fehler: {e}")
 
     def initLogs(self):
+        """
+        Initialisierung des Log-Tabs
+        """
         self.tab_logs = QWidget()
         self.tabWidget.addTab(self.tab_logs, "Logs")
         self.tabWidget.currentChanged.connect(self.push_logs)
@@ -802,11 +859,14 @@ class Monitoring(QMainWindow):
         self.tb_logs_threshold_limits.setGeometry(QRect(15, 15, self.width-40, self.height-80))
         self.tb_logs_threshold_limits.moveCursor(QtGui.QTextCursor.End)
         
+        # Sobald man den Tab wechselt, wird die Methode self.push_logs aufgerufen
         self.tab_logs_all.currentChanged.connect(self.push_logs)
 
     def push_logs(self):
+        """
+        Hier werden die Logs in die unterschiedlichen TextBrowser gepusht
+        """
         try:
-            
             logs_path = "Logs/system.log"
             if os.path.isfile(logs_path):
                 with open(logs_path) as f:
@@ -833,8 +893,13 @@ class Monitoring(QMainWindow):
             pass
     
     def initConfig(self):
+        """
+        Konfigurationstab wird initialisiert
+        """
         self.tab_config = QWidget()
         self.tabWidget.addTab(self.tab_config, "Konfigurieren")
+        
+        # Label zur Positionierung der Widgets
         y = 15
 
         self.lb_mail_sender = QLabel(self.tab_config)
@@ -950,7 +1015,7 @@ class Monitoring(QMainWindow):
         self.lb_drives_limit_status = QLabel(self.tab_config)
         self.lb_drives_limit_status.setGeometry(QRect(250, y, self.lb_x_default, self.lb_y_default))
 
-
+        # Blanks werden eingefügt und sind auch Standardmäßig eingestellt
         self.cb_cpu_softlimit.addItem("")
         self.cb_ram_softlimit.addItem("")
         self.cb_cpu_hardlimit.addItem("")
@@ -958,7 +1023,7 @@ class Monitoring(QMainWindow):
         self.cb_drives_softlimit.addItem("")
         self.cb_drives_hardlimit.addItem("")
 
-
+        # ComboBoxen werden gefüllt mit Werten von 100 bis 1
         for percent in range(100, 0, -1):
             self.cb_cpu_softlimit.addItem(str(percent))
             self.cb_ram_softlimit.addItem(str(percent))
@@ -970,7 +1035,7 @@ class Monitoring(QMainWindow):
 
 
         self.lb_config_info = QLabel(self.tab_config)
-        self.lb_config_info.setGeometry(QRect(15, self.height-125, 400, self.lb_y_default))
+        self.lb_config_info.setGeometry(QRect(15, self.height-125, self.width-30, self.lb_y_default))
         self.lb_config_info.setStyleSheet("color: green")
 
         self.lb_config_warnings = QLabel(self.tab_config)
@@ -984,7 +1049,8 @@ class Monitoring(QMainWindow):
         self.btn_startup_config = QPushButton(self.tab_config)
         self.btn_startup_config.setGeometry(QRect(220, self.height-70, 200, self.lb_y_default))
         self.btn_startup_config.setText("Startup Konfiguration speichern")
-
+        
+        # Bindings der Buttons und Comboboxen
         self.btn_running_config.clicked.connect(self.running_config)
         self.btn_startup_config.clicked.connect(self.startup_config)
         self.cb_drives_limits.currentTextChanged.connect(self.cb_drives_limits_refresh)
@@ -992,18 +1058,25 @@ class Monitoring(QMainWindow):
         self.cb_drives_hardlimit.currentTextChanged.connect(self.cb_drive_hard_commit)
         self.btn_validate_login.clicked.connect(self.validate_login)
 
-    def get_path(self):
-        # Directory-dialog
-        self.le_logs_destination_value.setText(str(QFileDialog.getExistingDirectory(self, "Ordner auswählen")))
-
     def running_config(self):
-        # Check, ob alle Eingaben in Ordnung sind
-        self.current_config = self.check_config()
+        """
+        Methode die aufgerufen wird, sobald der User auf den Button self.btn_running_config in dem Konfigurationstab klickt
+        Wenn alle Werte korrekt eingegeben sind, wird zum einen die current_config.ini geschrieben/überschrieben und anschließend
+        auch das self.current_config-Dictionary neu geschrieben
+        """
+        
+        # Zunächst wird die Methode check_config aufgerufen. Diese checkt, ob alle Eingaben in dem Konfigurationstab
+        # in Ordnung sind oder nicht. 
+        # Diese Methode returnt entweder False oder ein Dictionary mit der neuen Konfiguration
+        check_config = self.check_config()
         self.lb_timer = time.time()
 
-        if self.current_config:
-
-            # If True, write the current_config.ini-File
+        if check_config:
+            # Wenn check_config True ist (also das Dictionary returnt), wird self.current_config ebenfalls auf das 
+            # Dictionary referenziert.
+            self.current_config = check_config
+            
+            # Anschließend wird die current_config.ini-Datei geschrieben
             parser = ConfigParser()
 
             parser["DEFAULT"] = {"Mailadressen": self.current_config["mail_receiver"],
@@ -1013,7 +1086,7 @@ class Monitoring(QMainWindow):
                                         "password": base64.b64encode(self.le_mail_password.text().encode("utf-8")).decode("utf-8"),
                                         "server": self.le_mail_server.text(),
                                         "port":self.le_mail_server_port.text()}
-
+            
             if self.current_config["limits"]["cpu"]:
                 parser["limits_cpu"] = {"soft": self.current_config["limits"]["cpu"]["soft"],
                                         "hard": self.current_config["limits"]["cpu"]["hard"]}
@@ -1022,11 +1095,11 @@ class Monitoring(QMainWindow):
                 parser["limits_ram"] = {"soft": self.current_config["limits"]["ram"]["soft"],
                                         "hard": self.current_config["limits"]["ram"]["hard"]}
 
+            
             for k, v in self.current_config["limits"]["drives"].items():
                 if self.current_config["limits"]["drives"][k]:
                     parser[f"limits_{k}"] = {"soft": v["soft"],
                                              "hard": v["hard"]}
-
 
             with open("Temp/running_config.ini", "w") as c:
                 parser.write(c)
@@ -1035,15 +1108,19 @@ class Monitoring(QMainWindow):
             self.lb_config_info.setText("Laufende Konfiguration gespeichert")
             
             log("Logs/system.log", "info", "Temp/running_config.ini wurde geschrieben")
-
-
-            # read the config file and set the data to a dictionary 
+            
+            """
+            # Anschließend wird die ini-Datei geparsed und in die self.current_config-Variable geschrieben
+            # Der Grund, warum dasgemacht wird ist, ist, weil zu diesem Zeitpunkt self.current_config noch für jede
+            # Monitoring-Möglichkeit (CPU-Monitoring, RAM-Monitoring und alle Laufwerke-Monitorings), die nicht konfiguriert sind,
+            # ein leeres Dictionary enthält
+            """
             try:
                 self.current_config = {"username": "",
                                        "password": "",
                                        "server": "",
                                        "port": "",
-                                       "mail_receiver": [],
+                                       "mail_receiver": "",
                                        "attachment": None,
                                        "limits": {}}
 
@@ -1055,11 +1132,9 @@ class Monitoring(QMainWindow):
                 self.current_config["password"] = parser["Access_to_mail"]["password"]
                 self.current_config["server"] = parser["Access_to_mail"]["server"]
                 self.current_config["port"] = int(parser["Access_to_mail"]["port"])
-
+                
                 # Section "DEFAULT"
-                mail_addresses = (parser["DEFAULT"]["mailadressen"]).split(";")
-                for mail in mail_addresses:
-                    self.current_config["mail_receiver"].append(mail)
+                self.current_config["mail_receiver"] = parser["DEFAULT"]["mailadressen"]
                 self.current_config["attachment"] = eval(parser["DEFAULT"]["attach_logs"])
 
                 # Section "limits*""
@@ -1073,22 +1148,33 @@ class Monitoring(QMainWindow):
                             self.current_config["limits"][limit[-2:]] = {"soft": int(parser[limit]["soft"]), "hard": int(parser[limit]["hard"])}
 
                 log("Logs/system.log", "info", f"Temp/running_config.ini-Datei erfolgreich geparsed")
+                return True
+                
             except Exception as e:
                 log("Logs/system.log", "error", f"Temp/running_config.ini-Datei konnte nicht erfolgreich geparsed werden. Fehler: {e}")
-
+                return False
+        else:
+            return False
+        
     def startup_config(self):
         """
-        Save startupconfig
-        first save current_config, then copy the current_config.ini file to startup_config.ini file
+        Ini-Datei dauerhaft speichern und beim erneuten Aufruf des Programms automatisch parsen.
+        Im Prinzip wird nur die running_config.ini erstellt und anschließend kopiert
         """
-
+        
         self.lb_timer = time.time()
-
+        
+        # current_config wird vorher in einer Variablen gespeichert, falls self.running_config False returnt. Wenn False 
+        # returnt wird, ist self.current_config None (wird beim Aufruf der Funktion check_config auf None gesetzt). Somit 
+        # kann man dies wieder rückgängig machen
         current_config = self.current_config
-
+        
+        # Erstellung der running_config. Falls eine Eingabe des Users fehlerhaft ist oder fehlt, wird False returnt. 
         if not self.running_config():
             self.current_config = current_config
             return
+        
+        # Es wird die running_config.ini kopiert und als startup_config.ini gespeichert
         try:
             shutil.copy("Temp/running_config.ini", "startup_config.ini")            
             self.lb_config_info.setStyleSheet("color: green")
@@ -1096,49 +1182,58 @@ class Monitoring(QMainWindow):
             log("Logs/system.log", "info", "startup_config.ini erfolgreich erstellt")
 
         except Exception as e:
-            log("Logs/system.log", "info", f"startup_config.ini konnte nicht erstellt werden. Fehler: {e}")
+            self.lb_config_info.setStyleSheet("color: red")
+            self.lb_config_info.setText(f"Startup Konfiguration konnte nicht gespeichert werden. Fehler: {e}")
+            log("Logs/system.log", "error", f"startup_config.ini konnte nicht erstellt werden. Fehler: {e}")
  
     def check_config(self):
         """
-        onclick on the one of the save configuration buttons
-        It checks if all the necessary inputs are correct
+        Methode wird aufgerufen, wenn man die Konfiguration speichern möchte. Hier wird geprüft, ob die Eingaben,
+        die der User gemacht hat, korrekt sind.
+        :return: Entweder False oder ein Dictionary
         """
-        self.current_config = None
+        
         self.lb_config_warnings.clear()
         self.lb_config_warnings.setStyleSheet("color: red")
         self.lb_config_info.clear()
         self.lb_timer = time.time()
 
-        log("Logs/system.log", "info", "Starte Überprüfung Konfigurationsdateien")
-
+        log("Logs/system.log", "info", "Starte Überprüfung der Konfiguration")
+        
+        # Sollten irgendwelche Prozesse am laufen sein, müssen diese zunächst beendet werden. False wird returnt
         if self.processes:
             self.lb_config_warnings.setText("Beende zunächst alle Monitorings.")
-            log("Logs/system.log", "error", "current_config.ini konnte nicht geschrieben werden - monitorings müssen beendet sein")
+            log("Logs/system.log", "error", "current_config.ini konnte nicht geschrieben werden - alle Monitorings müssen beendet sein")
             return False
-
+        
+        # Mailaccount muss zunächst validiert sein. False wird returnt
         if not self.mail_access:
             self.lb_config_warnings.setText("Validiere zunächst den Mailzugang.")
             log("Logs/system.log", "info", "current_config.ini konnte nicht geschrieben werden - Mailzugang muss zunächst validiert werden")
             return False
-
+        
+        # must_have_inputs sind die inputs, die benötigt werden, sodass die Konfiguration gespeichert werden kann.
+        # Dazu zählen die Mailzugangsdaten sowie der Mailempfänger
         must_have_inputs = []
         warn_msg_lb = "|"
         drive_chosen = {}
 
-        # temp-config
+        # Es wird zunächst ein Dictionary mit allen möglichen Einstellungen erstellt
         config = {"mail_receiver": "",
                   "attachment": None,
                   "limits": {"cpu": {},
                              "ram": {},
                              "drives": {}}}
 
-        # All drives appended to the temp config dictionary
+        # Alle Laufwerke werden dem dictionary hinzugefügt
         for drive in self.drives:
             config["limits"]["drives"][drive] = {}
             drive_chosen[drive] = {"soft": "", "hard": ""}
-
         
-        if self.le_mail_receiver.text():
+        # Der aktuelle Text des LineEdits für die Empfänger-Mailadresse wird ausgelesen
+        # Wenn nichts eingegeben wurde oder nur Whitespaces, dann wird False der Liste must_have_inputs
+        # hinzugefügt 
+        if self.le_mail_receiver.text().strip():
             config["mail_receiver"] = self.le_mail_receiver.text()
         else:
             must_have_inputs.append(False)
@@ -1152,9 +1247,10 @@ class Monitoring(QMainWindow):
             config["attachment"] = True
 
 
-        # The Limits are optional. But the user is just able to start the monitoring if the limits are set
+        # Die Konfiguration der Schwellenwerte ist optional, jedoch muss der User die entsprechenden 
+        # Schwellenwerte konfiguriert haben (z. B. für die CPU), um das Monitoring dafür zu starten
 
-        # Some checks for the limits of the cpu
+        # Überprüfung der CPU-Schwellenwerte
 
         if (self.cb_cpu_softlimit.currentText() == "") and (not self.cb_cpu_hardlimit.currentText() == ""):
             warn_msg_lb += " CPU - Wert wurde nicht eingegeben |"
@@ -1173,7 +1269,7 @@ class Monitoring(QMainWindow):
             config["limits"]["cpu"]["hard"] = int(self.cb_cpu_hardlimit.currentText())
 
 
-        # Some checks for the limits of the ram
+        # Überprüfung der RAM-Schwellenwerte
                 
         if (self.cb_ram_softlimit.currentText()  == "" and not self.cb_ram_hardlimit.currentText()  == ""):
             warn_msg_lb += " Arbeitsspeicher - Ein Wert wurde nicht eingegeben |"
@@ -1192,7 +1288,7 @@ class Monitoring(QMainWindow):
             config["limits"]["ram"]["hard"] = int(self.cb_ram_hardlimit.currentText())
 
 
-        # Some checks about each drive
+        # Überprüfung der Laufwerk-Schwellenwerte
         for k in self.drive_chosen.keys():
 
             if self.drive_chosen[k]["soft"] == "" and self.drive_chosen[k]["hard"] == "":
@@ -1208,21 +1304,24 @@ class Monitoring(QMainWindow):
                 config["limits"]["drives"][k]["soft"] = int(self.drive_chosen[k]["soft"])
                 config["limits"]["drives"][k]["hard"] = int(self.drive_chosen[k]["hard"])
                 
-
+        
+        # Falls bei der Konfiguration der Schwellenwerte nicht alle Eingaben korrekt sind, wird eine Warn-Message 
+        # in ein Label geschrieben, jedoch wird die Konfiguration trotzdem gespeichert (nur ohne die fehlerhafte 
+        # Konfiguration)
         if len(warn_msg_lb) != 1:
             self.lb_config_warnings.setText(warn_msg_lb)
-
+        
+        # Nur wenn alle must_have_inputs True sind, wird das config-Dictionary returnt. Anderenfalls False
         if all(must_have_inputs):
             log("Logs/system.log", "info", "Beende Überprüfung Konfigurationsdateien. Alle essentiellen Eingaben sind gültig.")
             return config
         else:
             log("Logs/system.log", "info", "Beende Überprüfung Konfigurationsdateien. Mind. eine ungültige essentielle Eingabe")
-            return None
+            return False
 
     def cb_drives_limits_refresh(self):
         """
-        If someone changes the current text of the drive, it's checks the value of the new chosen 
-        drive and sets it to the comboboxes of the limits
+        Die ComboBoxen im Konfigurationstab der Limits werden angepasst, sobald sich der Text der ComboBox ändert.
         """
         for k in self.drive_chosen.keys():
             if k == self.cb_drives_limits.currentText():
@@ -1231,7 +1330,7 @@ class Monitoring(QMainWindow):
 
     def cb_drive_soft_commit(self):
         """
-        On change of the value of the soft limits it's written to the drive_chosen dictionary
+        Der Wert des Softlimits des aktuell ausgewählten Laufwerks wird ins self.drive_chosen-Dictionary geschrieben
         """
         for k in self.drive_chosen.keys():
             if k == self.cb_drives_limits.currentText():
@@ -1239,7 +1338,7 @@ class Monitoring(QMainWindow):
 
     def cb_drive_hard_commit(self):
         """
-        On change of the value of the hard limits it's written to the drive_chosen dictionary
+        Der Wert des Hardlimits des aktuell ausgewählten Laufwerks wird ins self.drive_chosen-Dictionary geschrieben
         """
         for k in self.drive_chosen.keys():
             if k == self.cb_drives_limits.currentText():
@@ -1247,7 +1346,7 @@ class Monitoring(QMainWindow):
 
     def validate_login(self):
         """
-        Validate the login data 
+        Validierung der Logindaten
         """
 
         self.lb_timer = time.time()
@@ -1261,17 +1360,14 @@ class Monitoring(QMainWindow):
                 log("Logs/system.log", "info", "Mailkonto-Validierung - nicht alle Felder sind ausgefüllt")
                 return
 
-            # Try to login. If it works the credentials are correct and the line edits getting disabled 
+            # Es wird nur versucht, sich mit den Logindaten an dem ausgewählten Mailserver anzumelden. Wenn das klappt, 
+            # ist das Mailkonto validiert und wird zu Eingabe disabled
             mailserver = smtplib.SMTP(self.le_mail_server.text(), int(self.le_mail_server_port.text()))
             mailserver.ehlo()
             mailserver.starttls()
             mailserver.ehlo()
             mailserver.login(self.le_mail_sender.text(), self.le_mail_password.text())
             
-            self.le_mail_server.setDisabled(True)
-            self.le_mail_server_port.setDisabled(True)
-            self.le_mail_sender.setDisabled(True)
-            self.le_mail_password.setDisabled(True)
             self.mail_access = True
             self.lb_config_info.setStyleSheet("color: green")
             self.lb_config_info.setText("Validierung erfolgreich")
@@ -1291,6 +1387,10 @@ class Monitoring(QMainWindow):
             log("Logs/system.log", "info", f"Mailkonto-Validierung - Folgender Fehler ist aufgetreten: {e} ")
         
     def initGraph(self):
+        """
+        Initialisierung des Graphen-Tabs
+        """
+        
         self.tab_graph = QWidget()
         self.tabWidget.addTab(self.tab_graph, "Graph")
 
@@ -1301,12 +1401,16 @@ class Monitoring(QMainWindow):
 
         self.tab_graph_mon_cpu = QWidget()
         self.tab_graph_mon.addTab(self.tab_graph_mon_cpu, "CPU")
+        # Mit PlotCanvas wird ein neues Objekt erstellt und auf den self.tab_graph_mon_cpu embedded
+        # Die Werte für den Live-Graphen erhält der Graph über die cpu.pickle-Datei
         PlotCanvas(self.tab_graph_mon_cpu, width=10, height=4, pickle_file="Temp/cpu.pickle").move(0, 100)
 
 
         self.tab_graph_mon_ram = QWidget()
         self.tab_graph_mon.addTab(self.tab_graph_mon_ram, "Arbeitsspeicher")
         PlotCanvas(self.tab_graph_mon_ram, width=10, height=4, pickle_file="Temp/ram.pickle").move(0, 100)
+        
+        # Variable zur Positionierung der Widgets
         y = 40
         
 
@@ -1357,48 +1461,70 @@ class Monitoring(QMainWindow):
 
         self.lb_graph_mon_system_time_value = QLabel(self.tab_graph_mon)
         self.lb_graph_mon_system_time_value.setGeometry(QRect(115, y, 50, self.lb_y_default))
-        y += 25
 
     def refresh_current_utilization(self):
+        """
+        Diese Methode wird sekündlich vom QTimer aufgerufen. Somit wird der Graph sekündlich aktualisiert
+        """
+        
+        # Einlesen der aktuellen Hardwareinformationen sowie die Anzahl der Prozesse und die aktuelle 
+        # Laufzeit des Programms
+        cpu = psutil.cpu_percent()
+        ram = round(get_virtual_memory()["percent"], 2)
+        processes = len(psutil.pids())
+        system_time = round(time.time() - self.start_system_time)
+
+        
+        # Die eingelesenen Werte werden den Listen angehängt
+        self.cpu_values.append(cpu)
+        self.ram_values.append(ram)
+        self.systemtime_values.append(system_time)
+        
+        # Sollten die Werte > 60 sein, wird der erste Wert gelöscht. Somit zeigt der Graph immer
+        # nur die letzten 60 Sekunden an
+        if len(self.cpu_values) > 60:
+            del self.cpu_values[0]
+            del self.ram_values[0]
+            del self.systemtime_values[0]
+        
+        # Durchschnittswerte der Auslastungen werden berechnet, da diese in Labels als Klartext
+        # angezeigt werden
+        cpu_avg = round(sum(self.cpu_values)/len(self.cpu_values), 2)
+        ram_avg = round(sum(self.ram_values)/len(self.ram_values), 2)
+        
+        # Liste der Werte werden mit dem pickle-Modul in eine Datei geschrieben, die vom Graphen 
+        # eingelesen wird und kann somit die Werte graphisch darstellen
+        with open("Temp/cpu.pickle", "wb") as p:
+            pickle.dump([self.systemtime_values, self.cpu_values], p)
+
+        with open("Temp/ram.pickle", "wb") as p:
+            pickle.dump([self.systemtime_values, self.ram_values], p)
+        
+        # Lables werden mit den neuen Werten beschriftet
+        self.lb_graph_mon_cpu_value.setText(str(cpu) + " %")
+        self.lb_graph_mon_ram_value.setText(str(ram) + " %")
+        self.lb_graph_mon_processes_value.setText(str(processes))
+        self.lb_graph_mon_system_time_value.setText(str(system_time) + " s")
+        self.lb_graph_mon_cpu_avg_value.setText(str(cpu_avg) + " %")
+        self.lb_graph_mon_ram_avg_value.setText(str(ram_avg) + " %")
+        
+        # Alle Status-, Error und Warninglabels werden nach 3 Sekunden gecleared
+        if time.time() - self.lb_timer >= 3:
+            self.lb_config_warnings.clear()
+            self.lb_error.clear()
+            self.lb_config_info.clear()
+            self.lb_status.clear()
+            self.lb_info_saved.clear()
+        
+        """
+        Kleines Feature zur Visualisierung. Sollte ein Monitoring laufen (z. B. für die CPU),
+        wird die Schriftfarbe der Labels entsprechend gefärbt 
+        rot=Hardlimit überschritten
+        orange=Softlimit überschritten
+        grün=kein Limit überschritten
+        schwarz=Monitoring läuft nicht
+        """
         try:
-            cpu = psutil.cpu_percent()
-            ram = round(get_virtual_memory()["percent"], 2)
-            processes = len(psutil.pids())
-            system_time = round(time.time() - self.start_system_time)
-
-
-            self.cpu_values.append(cpu)
-            self.ram_values.append(ram)
-            self.systemtime_values.append(system_time)
-
-            if len(self.cpu_values) > 60:
-                del self.cpu_values[0]
-                del self.ram_values[0]
-                del self.systemtime_values[0]
-            
-            cpu_avg = round(sum(self.cpu_values)/len(self.cpu_values), 2)
-            ram_avg = round(sum(self.ram_values)/len(self.ram_values), 2)
-
-            with open("Temp/cpu.pickle", "wb") as p:
-                pickle.dump([self.systemtime_values, self.cpu_values], p)
-
-            with open("Temp/ram.pickle", "wb") as p:
-                pickle.dump([self.systemtime_values, self.ram_values], p)
-
-            self.lb_graph_mon_cpu_value.setText(str(cpu) + " %")
-            self.lb_graph_mon_ram_value.setText(str(ram) + " %")
-            self.lb_graph_mon_processes_value.setText(str(processes))
-            self.lb_graph_mon_system_time_value.setText(str(system_time) + " s")
-            self.lb_graph_mon_cpu_avg_value.setText(str(cpu_avg) + " %")
-            self.lb_graph_mon_ram_avg_value.setText(str(ram_avg) + " %")
-
-            if time.time() - self.lb_timer >= 3:
-                self.lb_config_warnings.clear()
-                self.lb_error.clear()
-                self.lb_config_info.clear()
-                self.lb_status.clear()
-                self.lb_info_saved.clear()
-
             if "CPU" in self.monitoring:
                 soft = int(self.current_config["limits"]["cpu"]["soft"])
                 hard = int(self.current_config["limits"]["cpu"]["hard"])
@@ -1424,247 +1550,78 @@ class Monitoring(QMainWindow):
                     self.lb_graph_mon_ram_value.setStyleSheet("color: green")
             else:
                 self.lb_graph_mon_ram_value.setStyleSheet("color: black")
-        except Exception as e:
-            log("Logs/system.log", "error", f"Aktualisierung des Live-Graphen nicht erfolgreich. Fehler: {e}")
+        except:
+            pass
 
 class PlotCanvas(FigureCanvas):
-
-    def __init__(self, parent=None, width=8, height=4, dpi=100, pickle_file=None):
+    """
+    Das matploblob-Canvas, was den Live-Graphen in der GUI anzeigt
+    """
+    def __init__(self, parent, width, height, pickle_file):
+        """
+        :param parent: QWidget -> wo das Canvas embedded wird
+        :param width: Integer -> Breite des Graphen
+        :param height: Integer -> Höhe des Graphen
+        :param pickle_file: String -> Pfad der pickle-Datei mit den Werten für den Graphen
+        :return: None
+        """
+        
         self.file = pickle_file
 
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.fig = Figure(figsize=(width, height))
         self.axis = self.fig.add_subplot(1, 1, 1)
         self.axis.set_ylabel("Auslastung in %")
         self.axis.set_xlabel("Zeit in s")
 
         self.axis.set_ylim(ymin=0, ymax=105)
-
+        
+        # Der Konstruktor der geerbten Klasse FigureCanvas wird aufgerufen
         FigureCanvas.__init__(self, self.fig)
+        
         self.setParent(parent)
-
-        FigureCanvas.setSizePolicy(self,
-                QSizePolicy.Expanding,
-                QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
-
+        
+        # Animationsmethode wird gestartet
         self.ani = animation.FuncAnimation(self.fig, self.animate, interval=1000)
 
     def animate(self, i):
+        # Überprüfung ob die Datei existiert
         if os.path.isfile(self.file):
             try:
+                # Die pickle-Datei wird gelesen/geladen
+                # xs und ys sind jeweils eine Liste
                 with open(self.file, "rb") as p:
                     xs, ys = pickle.load(p)
-
+                
+                # Durchschnittswerte
                 y_mean = [sum(ys)/len(ys)] * len(ys)
 
-                # Scaling is in int, not float
+                # Skalierung der Achsen sind Integer und keine Floats
                 self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
                 self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
                 
+                # Achsen werden gecleared, da sonst jede Sekunde ein neuer Graph erstellt wird
                 self.axis.clear()
+                # Skalierung der y-Achse
                 self.axis.set_ylim(ymin=0, ymax=105)
-
+                
+                # Beschriftung der Labels
                 self.axis.set_ylabel("Auslastung in %")
                 self.axis.set_xlabel("Zeit in s")
-                self.axis.plot(xs, ys, label=f"Auslastung letzte 60 s")
+                
+                # Achsen werden geplotted udnd erhalten ein Label, sodass man sieht, welche Achse was ist
+                self.axis.plot(xs, ys, label="Auslastung letzte 60 s")
                 self.axis.plot(xs, y_mean, label="Durchschnitt Auslastung letzte 60 s", linestyle="--")
-
+                
+                # Legende ist oben links lokalisiert
                 self.axis.legend(loc='upper left')
             except Exception as e:
                 log("Logs/monitoring.log", "error", f"Graph-Animation nicht möglich. Fehler: {e}")
 
-        else:
-            self.axis.clear()
-
-            # Scaling is in int, not float
-            self.axis.yaxis.set_major_locator(MaxNLocator(integer=True))
-            self.axis.xaxis.set_major_locator(MaxNLocator(integer=True))
-            self.axis.set_ylim(ymin=0, ymax=105)
-            
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        log("Logs/system.log", "info", f"{sys.argv[0]} wurde mit Kommandozeilenparametern gestartet")
-
-        parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, 
-                                        description=textwrap.dedent("""\
-        Monitoring via Kommandozeile\n
-
-        Bsp.:
-        Um das Monitoring für die CPU zu starten, mit Softlimit 70 und Hardlimit 80:
-        python Main.py start cpu -S 70 -H 80 -r <Email-Empfänger> -U <Email-User> -P <Passwort> -s <SMTP-Server> -p <Port>
-        
-        !!! Das Passwort muss ggf. in Anführungszeichen angegeben werden, falls im Kennwort ein kaufmännischen Und (&) enthalten ist!
-        
-        Um das Monitoring für den Arbeitsspeicher zu starten und eine Konfigurationsdatei vorhanden ist:
-        python Main.py start ram -C <Konfigurationsdatei>
-        
-
-        Um das aktuell laufende cpu Monitoring zu beenden:
-        python Main.py stop cpu
-        """))
-
-        mon = ["all", "cpu", "ram"]
-        for drive in get_pc_information()["drives"]:
-            mon.append(drive.replace(":", "").lower())
-        
-        parser.add_argument("startstop", metavar="start, stop", help="Starten (start) oder stoppen (stop) eines Monitorings. Um alle Monitorings zu stoppen: stop all", 
-                            choices=["start", "stop"])
-        parser.add_argument("monitoring", metavar=", ".join(mon), help="Typ des Monitoring", choices=mon)
-
-        parser.add_argument("-a", action="store_true", dest="attachment", help="Attachment als Anhang senden")
-
-        group = parser.add_mutually_exclusive_group()
-
-        group.add_argument("-c", "--config", metavar="", action="store", dest="config", nargs=1, help="Relativen oder absoluten Pfad einer Konfigurationsdatei")
-        group.add_argument("-m", "--manual", metavar="", action="store", dest="commands", nargs=7, 
-                           help="int: <Softlimit>, int: <Hardlimit>, str: <Mailempfänger>, str: <Mailuser>, str: <Mailpassword>, str: <SMTP-Server>, int: <Port>")
-        
-        args = parser.parse_args()
-
-        if args.startstop == "start" and args.config:
-            try:
-                conf = ConfigParser()
-                conf.read(args.config)
-
-                # Section "Access_to_mail"
-                user = conf["Access_to_mail"]["user"]
-                password = base64.b64decode(conf["Access_to_mail"]["password"]).decode("utf-8")
-                server = conf["Access_to_mail"]["server"]
-                port = int(conf["Access_to_mail"]["port"])
-
-                # Section "DEFAULT"
-                mail_addresses = (conf["DEFAULT"]["mailadressen"]).split(";")
-                attachment = conf["DEFAULT"]["attach_logs"]
-                
-                if args.monitoring == "cpu":
-                    soft = int(conf["limits_cpu"]["soft"])
-                    hard = int(conf["limits_cpu"]["hard"])
-
-                elif args.monitoring == "ram":
-                    soft = int(conf["limits_ram"]["soft"])
-                    hard = int(conf["limits_ram"]["hard"])
-                
-                elif args.monitoring in mon:
-                    monitoring = args.monitoring
-                    soft = int(conf[f"limits_{monitoring.upper()}:"]["soft"])
-                    hard = int(conf[f"limits_{monitoring.upper()}:"]["hard"])
-
-                try:
-                    conn = smtplib.SMTP(server, port)
-                    conn.ehlo()
-                    conn.starttls()
-                    conn.ehlo()
-                    conn.login(user, password)
-                    conn.quit()
-
-                    if os.path.isfile("Temp/processes.pickle"):
-                        with open("Temp/processes.pickle", "rb") as p:
-                            processes = pickle.load(p)
-                        
-                        for process, pid in processes.items():
-                            if process == args.monitoring:
-                                print(f"{args.monitoring}-Monitoring läuft bereits unter der Prozess-ID {pid}")
-                                sys.exit()
-                    
-                    try:
-                        subprocess.Popen(f"functions.exe start {args.monitoring} -m {soft} {hard} {mail_addresses[0]} {user} {password} {server} {port}")
-                        #subprocess.Popen(f"python functions.py start {args.monitoring} -m {soft} {hard} {mail_addresses[0]} {user} {password} {server} {port}")
-                        print(f"{args.monitoring}-Monitoring wurde gestartet")
-                        log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
-                        sys.exit()
-
-                    except Exception as e:
-                        print(f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
-                        log("Logs/system.log", "error", f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
-                        sys.exit()
-
-                except Exception as e:
-                    log("Logs/system.log", "error", f"Validierung am SMTP-Server war nicht möglich. Fehler: {e}")
-                    print(f"Validierung am SMTP-Server war nicht möglich. Fehler: {e}")
-                    sys.exit()
-
-            except Exception as e:
-                log("Logs/system.log", "error", f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e} nicht konfiguriert")
-                print(f"Konfigurationsdatei konnte nicht geparsed werden. Fehler: {e} nicht konfiguriert")
-                sys.exit()
-        
-        elif args.startstop == "start" and args.commands:
-            if args.monitoring == "all":
-                print("Der Parameter 'all' kann nur beim stoppen von Monitorings übergeben werden")
-                sys.exit()
-
-            if os.path.isfile("Temp/processes.pickle"):
-                    with open("Temp/processes.pickle", "rb") as p:
-                        processes = pickle.load(p)
-                    
-                    for process, pid in processes.items():
-                        if process == args.monitoring:
-                            print(f"{args.monitoring}-Monitoring läuft bereits unter der Prozess-ID {pid}")
-                            sys.exit()
-            try:
-                if int(args.commands[0]) >= int(args.commands[1]) or int(args.commands[0]) > 100 or int(args.commands[0]) < 0 or int(args.commands[1]) > 100 or int(args.commands[1]) < 0:
-                    print("Ungültige Werte für die Limits")
-                    sys.exit()
-
-                if args.attachment:
-                    subprocess.Popen(f'functions.exe start {args.monitoring} -a -m {int(args.commands[0])} {int(args.commands[1])} {args.commands[2]} {args.commands[3]} "{args.commands[4]}" {args.commands[5]} {int(args.commands[6])}')
-                    print(f"{args.monitoring}-Monitoring wurde gestartet")
-                    log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
-                    sys.exit()
-
-                else:
-                    subprocess.Popen(f'functions.exe start {args.monitoring} -m {int(args.commands[0])} {int(args.commands[1])} {args.commands[2]} {args.commands[3]} "{args.commands[4]}" {args.commands[5]} {int(args.commands[6])}')
-                    print(f"{args.monitoring}-Monitoring wurde gestartet")
-                    log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring wurde gestartet")
-                    sys.exit()
-
-            except Exception as e:
-                print(f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
-                log("Logs/system.log", "error", f"Monitoring konnte nicht gestartet werden. Fehler: {e}")
-                sys.exit()
-        
-        elif args.startstop == "start":
-            print("Art des Monitorings wurde nicht angegeben. Für Hilfe, öffne das Programm mit dem Parameter -h")
-            sys.exit()
-
-        elif args.startstop == "stop":
-            if os.path.isfile("Temp/processes.pickle"):
-                with open("Temp/processes.pickle", "rb") as p:
-                    processes = pickle.load(p)
-
-            try:
-                if args.monitoring == "all":
-                    for proc in processes.values():
-                        try:
-                            psutil.Process(proc).terminate()
-                        except:
-                            continue
-                    sys.exit()
-
-                psutil.Process(processes[args.monitoring]).terminate()
-                log("Logs/monitoring.log", "info", f"{args.monitoring}-Monitoring mit der Prozess-ID {processes[args.monitoring]} wurde beendet")
-                del processes[args.monitoring]
-
-                with open("Temp/processes.pickle", "wb") as p:
-                    pickle.dump(processes, p)
-                sys.exit()
-
-            except Exception as e:
-                
-                print(f"Prozess konnte nicht beendet werden, da dieser nicht läuft.")
-                log("Logs/system.log", "error", f"Prozess konnte nicht beendet werden, da dieser nicht vorhanden ist")
-                sys.exit()
-
-            else:
-                print("Zurzeit ist kein Monitoring-Prozess am laufen.")
-                sys.exit()            
-
+    if platform.system() == "Windows":
+        app = QApplication(sys.argv)
+        window = Monitoring()
+        sys.exit(app.exec_())
     else:
-    
-        if platform.system() == "Windows":
-            app = QApplication(sys.argv)
-            window = Monitoring()
-            sys.exit(app.exec_())
-        else:
-            print("Läuft nur auf Windows")
+        print("Monitoring kann nur unter Windows gestartet werden")
