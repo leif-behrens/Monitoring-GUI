@@ -45,6 +45,10 @@ class Monitoring(QMainWindow):
     tb_* -> QTextBrowser
     """
     def __init__(self):
+        # Temp und Logs-Directory erstellen, falls es nicht existiert
+        Path("./Temp").mkdir(parents=True, exist_ok=True)
+        Path("./Logs").mkdir(parents=True, exist_ok=True)
+        
         log("Logs/system.log", "info", "Programm gestartet")
 
         super().__init__()
@@ -91,9 +95,6 @@ class Monitoring(QMainWindow):
         self.timer_refresh_current_utilization = QTimer(self)
         self.timer_refresh_current_utilization.timeout.connect(self.refresh_current_utilization)
         self.timer_refresh_current_utilization.start(1000)
-
-        # Temp-Directory erstellen, falls es nicht existiert
-        Path("./Temp").mkdir(parents=True, exist_ok=True)
         
         # Mainwindows sowie alle Tab-Widgets werden in der self.initWindow()-Methode initialisiert
         self.initWindow()
